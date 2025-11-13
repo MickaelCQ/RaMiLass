@@ -6,10 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 1. Create a library from your source code
-# This library will contain compare.cpp and any other logic files.
 add_library(assembler_lib
         src/compare.cpp
-        # Add other .cpp files from src/ here, but NOT main.cpp
+        src/convert.cpp  # <-- ADDED THIS LINE
 )
 
 # 2. Tell the library where to find its own headers
@@ -42,6 +41,7 @@ file(GLOB TEST_FILES "tests/*.cpp")
 # 8. Add the test executable
 add_executable(run_tests
         ${TEST_FILES}
+        tests/test_convert.cpp
 )
 
 # 9. Link the test executable against GTest and your assembler library
