@@ -1,10 +1,9 @@
 \vspace{-12mm}
 \section{Introduction}
-\subsection{Stratégies étudiées en cours (Exercice~1)}
 
-Nous avons vu que la recherche d’une \underline{superchaîne optimale} contenant tous les mots d’une famille \(\mathcal{F}\) est un problème NP-difficile. Par conséquent, nous utilisons des \underline{approches heuristiques} : celles-ci fournissent une solution, mais sans garantie d’optimalité. Trois méthodes ont été étudiées et développées durant le semestre. Comme demandé, voici une synthèse de chacune.
+Nous avons vu en cours que la recherche d’une \underline{superchaîne optimale} contenant tous les mots d’une famille \(\mathcal{F}\) est un problème NP-difficile. Par conséquent, nous utilisons des \underline{approches heuristiques} : celles-ci fournissent une solution, mais sans garantie d’optimalité. Trois méthodes ont été étudiées et développées durant le semestre. Comme demandé, voici une synthèse de chacune.
 
-\subsubsection{Méthode gloutonne}
+\subsection{Approche intuitive : la méthode gloutonne}
 
 Cette première approche repose sur les \underline{choix locaux optimaux} (maximisation des \textit{overlaps}), mais sans assurance d’optimalité globale. On va comparer nos mots deux à deux pour identifier leurs chevauchements. Sélectionner le plus long et fusionner les deux mots concernés (créer des contigs). On répéte ainsi l’opération jusqu’à obtenir la superchaîne $\mathcal{S}$. On stock nos \textit{overlaps} dans une matrice $\mathcal{M}$ de $n x n $ séquences. Ci-dessous la stratégie construite à partir de la correction du TD :  \\
 
@@ -58,16 +57,105 @@ Cette première approche repose sur les \underline{choix locaux optimaux} (maxim
 \KwFin
 \end{algorithm}
 \end{center}
+L’algorithme glouton, bien que rapide avec une complexité de $\mathcal{O}(n^3 + n^2 L)$, est une heuristique purement locale pose un soucis dans son manque de garantie d’optimalité globale. Pour atténuer cette limitation, nous explorons une approche plus systématique basée sur les \underline{graphes de chevauchement}.
 
-\subsection{Notre approche}
+\subsection{Approche par graphe de chevauchement}
 
-\subsection{Choix du langage \textit{(Exercice 3)}}
-Dans la création de cette assembleur, la question de langage c'est posé.
+Cette seconde manière d'appréhender notre problème repose sur une modélisation globale des relations entre les mots. Cela va nous permettre qui  mieux explorer les chevauchements et d’éviter \og les pièges des choix \fg locaux.  Avant de rechercher notre super séquence, il est nécessaire de construire le graphe. Chaque sommet du graphe représente un mot de  \(\mathcal{F}\), et chaque arête est pondérée par la longueur de \textit{l'overlap} :
 
-Nous avons le choix entre pléthore de langages, notamment \texttt{Python}, \texttt{C++} ou d'autre encore comme le go.
-Notre choix finale se porte sur le \texttt{C++}, prédécesseur du \texttt{C}, qui est un langage compilé donnant des performances excellentes en laissant le développeur contrôlé chaque point du programme. 
-Il permet de définir et libérer la mémoire manuellement, permettant un gain de place et de temps important. 
+\begin{center}
+\begin{algorithm}[H]
+\textcolor{bleumarine}{\textbf{\caption{Build\_Graphe\_Chevauchement()}}}
+\KwEntree{Famille de mots $\mathcal{F}$ , où chaque \( F_i \) est un mot}
+\KwSortie{Graphe de chevauchement \( G = (V, E) \), où \( V \) est l'ensemble des sommets (chaque sommet représente un mot de \( F \)) et \( E \) est l'ensemble des arêtes pondérées par la longueur du chevauchement}
+\KwComplexite{Temps : \(\mathcal{O}(n^2 L)\), Espace : \(\mathcal{O}(n^2)\) où \( L \) est la longueur moyenne des mots}
+\KwDebut \\
+    \Indp
+    \( V \gets F \) \;
+    \( E \gets "" \) \;
+    \KwPour \( i \) allant de \( 0 \) à \( n-1 \) \KwFaire \textcolor{black!50}{~($\mathcal{O}(n^2 L)$)}\\
+        \Indp
+        \KwPour \( j \) allant de \( 0 \) à \( n-1 \) \KwFaire \textcolor{black!50}{~($\mathcal{O}(n L)$)}\\
+            \Indp
+            \KwSi \( i \neq j \) \KwAlors \\
+                \Indp
+                \( k \gets \text{longueur du chevauchement maximal entre } F[i] \text{ et } F[j] \) \textcolor{black!50}{~($\mathcal{O}(L)$)}\;
+                \KwSi \( k > 0 \) \KwAlors \\
+                    \Indp
+                    \( E \gets E \cup \{(F[i], F[j], k)\} \) \;
+                    \Indm
+                \KwFinSi \\
+                \Indm
+            \KwFinSi \\
+            \Indm
+        \KwFinPour \\
+        \Indm
+    \KwFinPour \\
+    \KwRetourner \( G = (V, E) \) \;
+\Indm
+\KwFin
+\end{algorithm}
+\end{center}
 
-D'autre langages comme \texttt{Python} aurait peut être facilité la programmation et augmenté la lisibilité et la réutilisation par tous, mais a contrepartie une perte de performance.
+Pour cet algorithme (inspiré fortement de la correction du TD), l’initialisation des sommets et des arêtes est immédiate (évidemment en temps constant \(\mathcal{O}(1)\) ). Ensuite, pour chaque paire de mots \((F[i], F[j])\), l’algorithme calcule la longueur du chevauchement maximal \(k\). Cette opération est effectuée en \(\mathcal{O}(L)\), où \(L\) est notre longueur moyenne des mots (comme pour le glouton). Si un chevauchement est détecté (\(k > 0\)), une arête pondérée est ajoutée entre les sommets correspondants. Cette stratégie suggère une complexité temporelle globale de \(\mathcal{O}(n^2 L)\), car on doit parcourir toutes nos paires de mots, et chaque calcul de chevauchement est en \(\mathcal{O}(L)\). La complexité spatiale est \(\mathcal{O}(n^2)\), car on stocke au plus \(n^2\) arêtes dans \(E\). A titre d'exemple on aura pour des mots, si \(F = \{ \text{"BANANE"}, \text{"ANE"}, \text{"NEANT"} \}\), le graphe de chevauchement \(G\) contiendra les arêtes suivantes : ("BANANE", "ANE", 3), ("ANE", "NEANT", 2), et ("BANANE", "NEANT", 2). \\
 
-\newpage
+Ceci étant fait, l'étape suivante consiste à chercher notre chemin qui va maximiser la somme des pondérations de nos arêtes. On aura ici l'avantage (à l'inverse de glouton) de considérer l'entièreté des relations possibles entre les mots, ce qui, \textit{à priori}, améliore la qualité de notre solution $\mathcal{S}$.
+
+\begin{center}
+\begin{algorithm}[H]
+\textcolor{bleumarine}{\textbf{\caption{Assemblage\_Graphe\_Chevauchement()}}}
+\KwEntree{Famille de mots $\mathcal{F}$; graphe de chevauchement \( G = (V, E) \) construit à partir de $\mathcal{F}$}
+\KwSortie{Chaîne de caractères \( S \) assemblée}
+\KwComplexite{Temps : \(\mathcal{O}(n^2 L + n^3)\), Espace : \(\mathcal{O}(n^2)\)}
+\KwDebut \\
+    \Indp
+    " Initialisation"\\
+    \( S \gets \text{""} \) \;
+    \( \text{Visite} \gets \) tableau de booléens de taille \( n \), initialisé à \(\text{FAUX}\) \;
+    \( \text{chemin} \gets \) liste vide \;
+    \( \text{degré\_entrant} \gets \) tableau d'entiers de taille \( n \), initialisé à \( 0 \) \;
+
+    % Calcul des degrés entrants pour chaque sommet
+    \KwPour chaque arête \( (u, v, k) \in E \) \KwFaire \\
+        \Indp
+        \( \text{degré\_entrant}[v] \gets \text{degré\_entrant}[v] + 1 \) \;
+        \Indm
+    \KwFinPour
+
+    % Sélection du sommet de départ (celui avec le plus petit degré entrant)
+    \( u \gets \) sommet avec le plus petit \(\text{degré\_entrant}\) \;
+
+    % Construction du chemin en suivant les arêtes de poids maximal
+    \KwTantQue \( u \neq \text{AUCUN} \) \KwFaire \\
+        \Indp
+        \( \text{chemin}.ajouter(u) \) \;
+        \( \text{Visite}[u] \gets \text{VRAI} \) \;
+        % Trouver le sommet non Visite avec le chevauchement maximal
+        \( v \gets \) sommet non Visite tel que \( (u, v, k) \in E \) et \( k \) est maximal \;
+        \( u \gets v \) \;
+        \Indm
+    \KwFinTantQue
+
+    % Construction de la superchaîne \( S \) à partir du chemin
+    \KwSi \( \text{chemin.taille} > 0 \) \KwAlors \\
+        \Indp
+        \( S \gets F[\text{chemin}[0]] \) \;
+        \KwPour \( i \) allant de \( 1 \) à \( \text{chemin.taille} - 1 \) \KwFaire \\
+            \Indp
+            \( k \gets \) longueur du chevauchement entre \( F[\text{chemin}[i-1]] \) et \( F[\text{chemin}[i]] \) \;
+            \( S \gets S + F[\text{chemin}[i]][k:] \) \;
+            \Indm
+        \KwFinPour \\
+        \Indm
+    \KwFinSi
+
+    \KwRetourner \( S \) \;
+\Indm
+\KwFin
+\end{algorithm}
+\end{center}
+
+Cet algorithme recherche un chemin maximal dans le graphe de chevauchement pour construire une superchaîne. Il commence par identifier un sommet de départ, généralement celui avec le moins d’arêtes entrantes, afin de minimiser les risques de cycles. Ensuite, il construit un chemin en choisissant à chaque étape l’arête de poids maximal vers un sommet non visité. Cette approche permet d’explorer les chevauchements de manière plus globale que la méthode gloutonne. La complexité temporelle est \(\mathcal{O}(n^2 L + n^3)\), car la recherche des arêtes de poids maximal peut nécessiter jusqu’à \(\mathcal{O}(n^3)\) opérations dans le pire cas. La complexité spatiale reste \(\mathcal{O}(n^2)\) pour stocker le graphe.
+
+\subsection{DBJ and next}
+
