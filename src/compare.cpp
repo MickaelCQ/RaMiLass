@@ -3,14 +3,16 @@
 //
 
 #include "compare.h"
-
 #include <stdexcept>
+#include <utility> // Pour std::move
 
-CompareKMers::CompareKMers(std::vector<char> nuclist, std::vector<size_t> reads, size_t kmersize)
-    : nuclist(std::move(nuclist)), reads(std::move(reads)), kmersize(kmersize) {}
+// CHANGEMENT: Accepte std::vector<bool>
+CompareKMers::CompareKMers(std::vector<bool> bit_vector, std::vector<size_t> reads, size_t kmersize)
+    : bit_vector(std::move(bit_vector)), reads(std::move(reads)), kmersize(kmersize) {}
 
-CompareKMers::CompareKMers(std::vector<char> nuclist, std::vector<size_t> reads)
-    : nuclist(std::move(nuclist)), reads(std::move(reads)), kmersize(31) {}
+// CHANGEMENT: Accepte std::vector<bool>
+CompareKMers::CompareKMers(std::vector<bool> bit_vector, std::vector<size_t> reads)
+    : bit_vector(std::move(bit_vector)), reads(std::move(reads)), kmersize(31) {}
 
 // Setters
 void CompareKMers::set_kmersize(size_t k) {
@@ -22,8 +24,9 @@ size_t CompareKMers::get_kmersize() const {
     return kmersize;
 }
 
-std::vector<char>& CompareKMers::get_nuclist() {
-    return nuclist;
+// CHANGEMENT: Renommé et type de retour mis à jour
+std::vector<bool>& CompareKMers::get_bit_vector() {
+    return bit_vector;
 }
 
 std::vector<size_t>& CompareKMers::get_reads() {
@@ -32,25 +35,41 @@ std::vector<size_t>& CompareKMers::get_reads() {
 
 size_t CompareKMers::get_read_end_pos(const size_t read_idx) const
 {
-    if (read_idx < 0 || read_idx >= static_cast<size_t>(reads.size())) {
+    // CORRECTION: La vérification < 0 est inutile pour size_t
+    if (read_idx >= static_cast<size_t>(reads.size())) {
         throw std::out_of_range("read_idx is out of range");
     }
-    
-    if (read_idx == 0) {
-        return 0;
-    }
-    
+
+    // CORRECTION: L'ancien code retournait 0 pour read_idx == 0, ce qui était incorrect.
+    // reads[read_idx] contient la position de fin de la lecture 'read_idx'.
     return reads[read_idx];
 }
 
-size_t CompareKMers::get_n_kmers(const size_t ref) const {
-    const size_t start = get_read_end_pos(ref-1);
-    const size_t end = get_read_end_pos(ref);
-    return (end - start) - (kmersize - 1);
+size_t CompareKMers::get_n_kmers(const size_t ref_read_idx) const {
+    // CORRECTION: La position de début est 0 pour la première lecture, ou la fin de la précédente.
+    const size_t start_bit = (ref_read_idx == 0) ? 0 : get_read_end_pos(ref_read_idx - 1);
+    const size_t end_bit = get_read_end_pos(ref_read_idx);
+
+    // CHANGEMENT: Calcule le nombre de nucléotides à partir des bits
+    const size_t num_nucleotides = (end_bit - start_bit) / 2;
+
+    // On ne peut pas avoir de k-mer si la lecture est plus courte que le k-mer
+    if (num_nucleotides < kmersize) {
+        return 0;
+    }
+
+    // La formule est (longueur - k + 1)
+    return num_nucleotides - kmersize + 1;
 }
 
 size_t CompareKMers::get_all_n_kmers() const {
-    return nuclist.size() - (kmersize - 1);
+    // CORRECTION: L'ancienne implémentation était boguée.
+    // La nouvelle somme le nombre de k-mers de chaque lecture.
+    size_t total_kmers = 0;
+    for (size_t i = 0; i < get_n_reads(); ++i) {
+        total_kmers += get_n_kmers(i);
+    }
+    return total_kmers;
 }
 
 size_t CompareKMers::get_n_reads() const {
@@ -58,33 +77,53 @@ size_t CompareKMers::get_n_reads() const {
 }
 
 // Methods
-size_t CompareKMers::compare_line(const size_t line1, const size_t line2) const
+size_t CompareKMers::compare_line(const size_t bit_idx1, const size_t bit_idx2) const
 {
-    size_t matches = 0;
+    // CHANGEMENT: Logique de comparaison binaire
+    // Compare le chevauchement de k-1 nucléotides
     for (size_t i = 0; i < kmersize - 1; ++i)
     {
-        if (nuclist[line1 + i + 1] == nuclist[line2 + i])
+        // Index binaire du nucléotide (i+1) du k-mer 1
+        size_t nuc1_bit_start = bit_idx1 + (i + 1) * 2;
+
+        // Index binaire du nucléotide (i) du k-mer 2
+        size_t nuc2_bit_start = bit_idx2 + i * 2;
+
+        // Compare les deux bits du nucléotide
+        if (bit_vector[nuc1_bit_start]     != bit_vector[nuc2_bit_start] ||
+            bit_vector[nuc1_bit_start + 1] != bit_vector[nuc2_bit_start + 1])
         {
-            matches++;
+            return 0; // Pas de match, sortie anticipée
         }
     }
 
-    return matches == kmersize - 1 ? 1 : 0;
+    // Si la boucle se termine, tous les k-1 nucléotides ont matché
+    return 1;
 }
 
-std::vector<size_t> CompareKMers::compare_lines(const size_t ref) const
+std::vector<size_t> CompareKMers::compare_lines(const size_t ref_read_idx) const
 {
     std::vector<size_t> results;
-    results.reserve(kmersize);
+    results.reserve(reads.size()); // CORRECTION: L'original réservait 'kmersize'
+
+    // CORRECTION: L'ancien code passait 'ref_read_idx' comme un index de k-mer (bit_idx1).
+    // Nous récupérons maintenant l'index binaire de début de la *lecture* de référence.
+    const size_t ref_kmer_start_bit = (ref_read_idx == 0) ? 0 : reads[ref_read_idx - 1];
+
     for (size_t i = 0; i < reads.size(); ++i)
     {
-        if (i == ref) {
+        if (i == ref_read_idx) {
             results.push_back(1);  // Identical lines
             continue;
         }
 
-        size_t line_start = reads[i];
-        size_t cmp_result = compare_line(ref, line_start);
+        // CORRECTION: Récupère l'index binaire de début de la lecture 'i'
+        const size_t other_kmer_start_bit = (i == 0) ? 0 : reads[i - 1];
+
+        // Note: Une implémentation robuste vérifierait ici que les deux lectures
+        // ont une taille >= kmersize en utilisant get_n_kmers(i) > 0.
+
+        size_t cmp_result = compare_line(ref_kmer_start_bit, other_kmer_start_bit);
         results.push_back(cmp_result);
     }
     return results;
@@ -94,7 +133,7 @@ std::vector<std::vector<size_t>> CompareKMers::compare_all() const
 {
     std::vector<std::vector<size_t>> all_results;
     all_results.reserve(reads.size());
-    all_results.reserve(reads.size());
+    // La deuxième réservation était redondante et a été supprimée.
     for (size_t i = 0; i < reads.size(); ++i)
     {
         std::vector<size_t> line_results = compare_lines(i);

@@ -42,6 +42,7 @@ file(GLOB TEST_FILES "tests/*.cpp")
 add_executable(run_tests
         ${TEST_FILES}
         tests/test_convert.cpp
+        tests/test_compare.cpp
 )
 
 # 9. Link the test executable against GTest and your assembler library

@@ -6,35 +6,57 @@
 #define ASSEMBLEUR_COMPARE_H
 #include <string>
 #include <vector>
+#include <cstddef> // Pour size_t
 
-
-
+/**
+ * @struct CompareKMers
+ * @brief Compare les k-mers à partir d'un vecteur binaire de nucléotides.
+ *
+ * Cette classe stocke toutes les lectures d'un fichier FASTA sous forme
+ * d'un unique vecteur binaire (où chaque nucléotide est codé sur 2 bits)
+ * et un vecteur des positions de fin de chaque lecture (en bits).
+ */
 struct CompareKMers {
-    std::vector<char> nuclist;
-    std::vector<size_t> reads;
+    std::vector<bool> bit_vector; // CHANGEMENT: std::vector<char> -> std::vector<bool>
+    std::vector<size_t> reads;      // Vecteur des positions de fin de lecture (en bits)
     size_t kmersize = 31;
 
-    CompareKMers(std::vector<char> nuclist, std::vector<size_t> reads, size_t kmersize);
-    CompareKMers(std::vector<char> nuclist, std::vector<size_t> reads);
+    CompareKMers(std::vector<bool> bit_vector, std::vector<size_t> reads, size_t kmersize);
+    CompareKMers(std::vector<bool> bit_vector, std::vector<size_t> reads);
 
     // Setters
     void set_kmersize(size_t k);
 
     // Getters
     size_t get_kmersize() const;
-    std::vector<char>& get_nuclist();
+    std::vector<bool>& get_bit_vector(); // CHANGEMENT: get_nuclist -> get_bit_vector
     std::vector<size_t>& get_reads();
     size_t get_read_end_pos(size_t read_idx) const;
-    size_t get_n_kmers(size_t ref) const;
+    size_t get_n_kmers(size_t ref_read_idx) const;
     size_t get_all_n_kmers() const;
     size_t get_n_reads() const;
 
     // Methods
-    size_t                           compare_line(size_t line1, size_t line2) const;
-    std::vector<size_t>              compare_lines(size_t ref) const;
+    /**
+     * @brief Compare le chevauchement (k-1) de deux k-mers.
+     * @param bit_idx1 Index binaire de début du premier k-mer.
+     * @param bit_idx2 Index binaire de début du second k-mer.
+     * @return 1 si le suffixe (k-1) de k-mer1 correspond au préfixe (k-1) de k-mer2, sinon 0.
+     */
+    size_t compare_line(size_t bit_idx1, size_t bit_idx2) const;
+
+    /**
+     * @brief Compare le premier k-mer d'une lecture de référence à tous les autres.
+     * @param ref_read_idx Index de la lecture de référence.
+     * @return Vecteur de résultats (1 pour match, 0 sinon).
+     */
+    std::vector<size_t> compare_lines(size_t ref_read_idx) const;
+
+    /**
+     * @brief Exécute compare_lines pour chaque lecture.
+     * @return Matrice 2D des résultats de comparaison.
+     */
     std::vector<std::vector<size_t>> compare_all() const;
 };
-
-
 
 #endif //ASSEMBLEUR_COMPARE_H
