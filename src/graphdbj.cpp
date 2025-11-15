@@ -3,24 +3,19 @@
 #include <algorithm>  // pour std::sort
 #include <stdexcept> // pour std::runtime_error
 #include <iostream>	// logs optionnels
-
+using namespace std;
 /* Début Mickael – Implémentation 10/11/2025
  *
  * Dans ce fichier, comme  discuté en équipe : la construction du graphe de De Bruijn..
- *
- * La philosophie de cette implémentation :
- * - rester fidèle à l’algorithme du cours (double boucle i/j sur les séquences),
- * - découpler autant que possible les responsabilités,
- * - garder une trace précise de nos choix pour les futurs améliroation (et pour Annie cela va de soi) de l’équipe.
+ * La philosophie de cette implémentation est de rester fidèle à l’algorithme du cours (double boucle i/j sur les séquences). Découpler autant que possible les responsabilités.
  */
 
  // CONSTRUCTEUR
 
-GraphDBJ::GraphDBJ(size_t k)
-    : k(k)
+GraphDBJ::GraphDBJ(size_t k): k(k)
 {
     if (k < 2)
-        throw std::runtime_error("GraphDBJ: k doit être >= 2 pour construire un graphe de De Bruijn.");
+        throw runtime_error("GraphDBJ: k doit être >= 2 pour construire un graphe de De Bruijn.");
 }
 
 // CONSTRUCTION À PARTIR D’UNE LISTE DE SEQUENCES
@@ -45,7 +40,7 @@ GraphDBJ::GraphDBJ(size_t k)
  * @complexity
  * O(N * L) k-mers générés, chaque insertion coût amorti O(1).
  */
-void GraphDBJ::build_from_sequences(const std::vector<std::string>& sequences)
+void GraphDBJ::build_from_sequences(const vector<string>& sequences)
 {
     adjacency.clear();  // Par sécurité : permet de reconstruire proprement
 
@@ -53,8 +48,7 @@ void GraphDBJ::build_from_sequences(const std::vector<std::string>& sequences)
     {
         if (seq.size() >= k)
             process_sequence(seq);
-        // en-dessous, la séquence est trop courte : nous avons décidé
-        // collectivement de simplement l'ignorer (pas de k-mer possible)
+        // en-dessous, la séquence est trop courte : nous avons décidé  simplement de l'ignorer (pas de k-mer possible)
     }
 }
 
@@ -69,13 +63,13 @@ void GraphDBJ::build_from_sequences(const std::vector<std::string>& sequences)
  *
  * Cette fonction traduit directement la logique du j = 0 .. |Fi| - k.
  */
-void GraphDBJ::process_sequence(const std::string& seq)
+void GraphDBJ::process_sequence(const string& seq)
 {
     const size_t limit = seq.size() - k + 1;
 
     for (size_t j = 0; j < limit; ++j)
     {
-        std::string kmer = seq.substr(j, k);
+        string kmer = seq.substr(j, k);
         insert_kmer(kmer);
     }
 }
@@ -91,16 +85,16 @@ void GraphDBJ::process_sequence(const std::string& seq)
  *    suffix = ANANE  (k-1)
  *
  * Nous stockons prefix -> {suffix1, suffix2, ...}
- * Pourquoi "unordered_set" ? Nous avons discuté dansl' équipe de l’usage d’une liste vs set. Le set garantit l’unicité des edges sans, à priori, de tri trop coûteux. 
+ * Pourquoi "unordered_set" ? Nous avons discuté de l’usage d’une liste versus set. Le set garantit l’unicité des edges sans, à priori, de tri trop coûteux. 
  * Cela limite la duplication inutile et nous simplifie grandement la phase de tri final.
  */
-void GraphDBJ::insert_kmer(const std::string& kmer)
+void GraphDBJ::insert_kmer(const string& kmer)
 {
     if (kmer.size() != k)
         return; // garde fou
 
-    const std::string prefix = kmer.substr(0, k - 1);
-    const std::string suffix = kmer.substr(1, k - 1);
+    const string prefix = kmer.substr(0, k - 1);
+    const string suffix = kmer.substr(1, k - 1);
 
     adjacency[prefix].insert(suffix);
 }
@@ -109,15 +103,15 @@ void GraphDBJ::insert_kmer(const std::string& kmer)
 
 /**
  * @brief
- * Nous avons souvent eu besoin dans les étapes en aval d’obtenir une liste
+ * Nous avons souvent eu besoin dans certaines étapes en aval d’obtenir une liste
  * canonique et déterministe des (k-1)-mers. Le tri permet de la  reproductibilité, iteration cohérente entre runs,  alignement avec CompareKMers si des analyses croisées sont réalisées.
  * Le tri est effectué sur une copie (pas de mutation interne).
  * @complexity
  * O(V log V) où V = nombre de noeuds (k-1)-mers distincts.
  */
-std::vector<std::string> GraphDBJ::get_sorted_nodes() const
+vector<std::string> GraphDBJ::get_sorted_nodes() const
 {
-    std::vector<std::string> nodes;
+    vector<string> nodes;
     nodes.reserve(adjacency.size());
 
     for (const auto& entry : adjacency)
@@ -125,13 +119,13 @@ std::vector<std::string> GraphDBJ::get_sorted_nodes() const
         nodes.push_back(entry.first);
     }
 
-    std::sort(nodes.begin(), nodes.end());
+    sort(nodes.begin(), nodes.end());
     return nodes;
 }
 
 // ACCÈS DIRECT À LA STRUCTURE D’ADJACENCE
 
-const std::unordered_map<std::string, std::unordered_set<std::string>>& 
+const unordered_map<string, unordered_set<string>>& 
 GraphDBJ::get_graph() const
 {
     return adjacency;
