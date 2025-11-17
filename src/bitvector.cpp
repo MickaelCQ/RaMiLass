@@ -116,3 +116,11 @@ std::string BitVector::readBitVector() const {
     return out;
 }
 
+bool BitVector::test(size_t idx) const {
+    if (idx >= _bitCount) {
+        throw std::out_of_range("BitVector::test: index out of range");
+    }
+    size_t block = idx / BLOCK_BITS;
+    size_t offset = idx % BLOCK_BITS;
+    return _bitVector[block].test(offset);
+}

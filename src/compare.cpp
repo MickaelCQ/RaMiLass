@@ -6,12 +6,12 @@
 #include <stdexcept>
 #include <utility> // Pour std::move
 
-// CHANGEMENT: Accepte std::vector<bool>
-CompareKMers::CompareKMers(std::vector<bool> bit_vector, std::vector<size_t> reads, size_t kmersize)
+// CHANGEMENT: Accepte BitVector
+CompareKMers::CompareKMers(BitVector bit_vector, std::vector<size_t> reads, size_t kmersize)
     : bit_vector(std::move(bit_vector)), reads(std::move(reads)), kmersize(kmersize) {}
 
-// CHANGEMENT: Accepte std::vector<bool>
-CompareKMers::CompareKMers(std::vector<bool> bit_vector, std::vector<size_t> reads)
+// CHANGEMENT: Accepte BitVector
+CompareKMers::CompareKMers(BitVector bit_vector, std::vector<size_t> reads)
     : bit_vector(std::move(bit_vector)), reads(std::move(reads)), kmersize(31) {}
 
 // Setters
@@ -24,8 +24,8 @@ size_t CompareKMers::get_kmersize() const {
     return kmersize;
 }
 
-// CHANGEMENT: Renommé et type de retour mis à jour
-std::vector<bool>& CompareKMers::get_bit_vector() {
+// Retourne une référence au BitVector interne
+BitVector& CompareKMers::get_bit_vector() {
     return bit_vector;
 }
 
@@ -89,9 +89,9 @@ size_t CompareKMers::compare_line(const size_t bit_idx1, const size_t bit_idx2) 
         // Index binaire du nucléotide (i) du k-mer 2
         size_t nuc2_bit_start = bit_idx2 + i * 2;
 
-        // Compare les deux bits du nucléotide
-        if (bit_vector[nuc1_bit_start]     != bit_vector[nuc2_bit_start] ||
-            bit_vector[nuc1_bit_start + 1] != bit_vector[nuc2_bit_start + 1])
+        // Compare les deux bits du nucléotide en utilisant l'interface BitVector
+        if (bit_vector.test(nuc1_bit_start)     != bit_vector.test(nuc2_bit_start) ||
+            bit_vector.test(nuc1_bit_start + 1) != bit_vector.test(nuc2_bit_start + 1))
         {
             return 0; // Pas de match, sortie anticipée
         }

@@ -20,7 +20,6 @@ void Convert::process_fasta_file(const std::string& filename) {
     // Clear any previous data
     bit_vector = BitVector();
     read_end_positions.clear();
-    _cache_valid = false;
 
     size_t total_read_size = 0;
     size_t total_read_number = 0;
@@ -99,15 +98,10 @@ void Convert::convert_and_store_sequence(const std::string& sequence) {
 
     // Store the *new* cumulative size of the bit vector
     read_end_positions.push_back(bit_vector.size());
-    _cache_valid = false;
 }
 
-const std::vector<bool>& Convert::get_bit_vector() const {
-    if (!_cache_valid) {
-        _bit_vec_cache = bit_vector.to_vector();
-        _cache_valid = true;
-    }
-    return _bit_vec_cache;
+const BitVector& Convert::get_bit_vector() const {
+    return bit_vector;
 }
 
 const std::vector<size_t>& Convert::get_read_end_positions() const {

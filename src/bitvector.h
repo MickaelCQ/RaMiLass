@@ -53,4 +53,15 @@ public :
     * @brief Convert back to sequence (naive: interpret every 2 bits as nucleotide using A,C,G,T mapping).
     */
     std::string readBitVector() const;
+
+    // --- accès aux bits ---
+    /**
+     * @brief Teste le bit à l'index global `idx`.
+     */
+    bool test(size_t idx) const;
+
+    /**
+     * @brief Opérateur d'indexation pour accéder aux bits.
+     */
+    bool operator[](size_t idx) const { return test(idx); }
 };

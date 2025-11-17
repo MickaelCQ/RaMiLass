@@ -62,7 +62,7 @@ TEST_F(ConvertTest, ProcessesSimpleSequenceCorrectly) {
         true,  true   // T (11)
     };
 
-    EXPECT_EQ(bit_vec, expected_vec);
+    EXPECT_EQ(bit_vec.to_vector(), expected_vec);
 }
 
 // Test case for loading one of the real FASTA files
@@ -97,4 +97,3 @@ TEST(ConvertLoadTest, LoadsRealFastaFile) {
     // The size of the full bit vector should be equal to the last end position
     EXPECT_EQ(bit_vec.size(), end_pos.back());
 }
-

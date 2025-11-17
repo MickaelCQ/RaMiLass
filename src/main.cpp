@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Conversion terminee." << std::endl;
 
-    std::vector<bool> bit_vector = std::move(converter.get_bit_vector());
+    const BitVector& bit_vector_ref = converter.get_bit_vector();
     std::vector<size_t> read_ends = std::move(converter.get_read_end_positions());
 
     // --- 3. Utiliser CompareKMers avec les données ---
@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    CompareKMers comparer(std::move(bit_vector), std::move(read_ends), KMER_SIZE);
+    CompareKMers comparer(bit_vector_ref, std::move(read_ends), KMER_SIZE);
 
     // --- 4. Afficher les résultats ---
     size_t total_reads = comparer.get_n_reads();
