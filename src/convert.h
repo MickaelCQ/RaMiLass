@@ -27,7 +27,7 @@ class Convert
 {
 private:
     BitVector bit_vector;
-    std::vector<size_t> read_end_positions;
+    std::vector<size_t> read_end_positions;  // Ending position of a read in bits
 
     // Cache to satisfy API returning const std::vector<bool>&
     mutable std::vector<bool> _bit_vec_cache;

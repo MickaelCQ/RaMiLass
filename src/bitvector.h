@@ -10,7 +10,7 @@ class BitVector
 {
 protected:
     std::vector<std::bitset<60>> _bitVector;
-    size_t _sizeElement = 4;            // length of the element in the bitset (not used for basic push_back)
+    size_t _sizeElement = 2;            // length of the element in the bitset (not used for basic push_back)
     size_t _bitCount = 0;               // total number of bits stored
 
     std::vector<std::pair<char, int>> _listBit;   // list of bit codes associated to a char (optional)

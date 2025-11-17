@@ -18,7 +18,7 @@ void Convert::process_fasta_file(const std::string& filename) {
     }
 
     // Clear any previous data
-    bit_vector.clear();
+    bit_vector = BitVector();
     read_end_positions.clear();
     _cache_valid = false;
 

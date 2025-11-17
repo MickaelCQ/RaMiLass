@@ -97,10 +97,7 @@ void BitVector::addCha(char cha) {
             push_back(true);
             break;
         default:
-            // Treat unknowns as A (00)
-            push_back(false);
-            push_back(false);
-            break;
+            throw std::invalid_argument("Invalid nucleotide character: " + std::string(1, cha));
     }
 }
 
