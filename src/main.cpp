@@ -10,7 +10,7 @@
 #include <bitset>
 
 
-
+#include "graphdbj.h"
 #include "convert.h"   // Notre classe pour lire le FASTA
 #include "compare.h" // Notre classe pour comparator les k-mers (issus du FASTA).
 
@@ -114,6 +114,25 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "Conversion terminee." << std::endl;
+
+    // --- Construction du Graphe de De Bruijn ---
+    std::cout << "Construction du graphe de Bruijn..." << std::endl;
+
+    // Création de l'objet graphe (convertit automatiquement les bitvectors en noeuds)
+    GraphDBJ graph(converter, KMER_SIZE);
+
+    // Récupération du vecteur de pointeurs de noeuds
+    std::vector<Noeud*> tousLesNoeuds = graph.getNodes();
+
+    std::cout << "Graphe construit." << std::endl;
+    std::cout << "Nombre de noeuds uniques (k-1 mers) : " << tousLesNoeuds.size() << std::endl;
+
+    // Exemple d'affichage pour un petit graphe
+    if (tousLesNoeuds.size() < 20) {
+        for (Noeud* n : tousLesNoeuds) {
+            std::cout << "Noeud " << n->p << " a " << n->c.size() << " enfants." << std::endl;
+        }
+    }
 
     const BitVector& bitVector_ref = converter.get_bitVector();
     std::vector<size_t> read_ends = std::move(converter.get_read_end_positions());

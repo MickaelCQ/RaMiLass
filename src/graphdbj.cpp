@@ -1,132 +1,114 @@
 #include "graphdbj.h"
+#include <iostream>
+#include <stdexcept>
 
-#include <algorithm>  // pour std::sort
-#include <stdexcept> // pour std::runtime_error
-#include <iostream>	// logs optionnels
-using namespace std;
-/* Début Mickael – Implémentation 10/11/2025
- *
- * Dans ce fichier, comme  discuté en équipe : la construction du graphe de De Bruijn..
- * La philosophie de cette implémentation est de rester fidèle à l’algorithme du cours (double boucle i/j sur les séquences). Découpler autant que possible les responsabilités.
- */
+GraphDBJ::GraphDBJ(const Convert& converter, int kmer_size) : k(kmer_size) {
+    if (k <= 1) {
+        throw std::invalid_argument("K doit etre superieur a 1 pour construire un graphe.");
+    }
+    // Un uint64_t peut stocker jusqu'à 32 nucléotides (64 bits). 
+    // Donc k-1 doit être <= 32 => k <= 33.
+    if (k > 33) {
+        throw std::invalid_argument("Taille de K trop grande pour etre stockee sur 64 bits (max 33).");
+    }
 
- // CONSTRUCTEUR
+    const BitVector& bv = converter.get_bitVector();
+    const std::vector<size_t>& read_ends = converter.get_read_end_positions();
 
-GraphDBJ::GraphDBJ(size_t k): k(k)
-{
-    if (k < 2)
-        throw runtime_error("GraphDBJ: k doit être >= 2 pour construire un graphe de De Bruijn.");
-}
+    size_t current_read_start = 0;
 
-// CONSTRUCTION À PARTIR D’UNE LISTE DE SEQUENCES
+    // 1. Parcourir chaque lecture
+    for (size_t end_pos : read_ends) {
+        // Calculer la longueur de la lecture en bits
+        size_t read_len_bits = end_pos - current_read_start;
+        size_t read_len_nuc = read_len_bits / 2;
 
-/**
- * @brief
- * On applique directement le pseudocode vu en cours :
- *
- * Début
- *    pour i = 0 .. n-1
- *       pour j = 0 .. |Fi| - k
- *          inserer( L , sous_chaine(Fi, j, k) )
- *       fin pour
- *    fin pour
- * Fin
- *
- * Où Fi est la i-ème séquence.
- *
- * Ici, nous déléguons la génération des k-mers à process_sequence(),
- * ce qui nous donne une meilleure lisibilité et une cohérence interne.
- *
- * @complexity
- * O(N * L) k-mers générés, chaque insertion coût amorti O(1).
- */
-void GraphDBJ::build_from_sequences(const vector<string>& sequences)
-{
-    adjacency.clear();  // Par sécurité : permet de reconstruire proprement
+        // Si la lecture est assez longue pour contenir au moins un k-mer
+        if (read_len_nuc >= (size_t)k) {
+            // Parcourir tous les k-mers de cette lecture
+            // On s'arrête quand il ne reste plus assez de place pour un k-mer
+            for (size_t i = 0; i <= read_len_nuc - k; ++i) {
+                
+                // Position en bits du début du k-mer courant
+                size_t bit_idx = current_read_start + (i * 2);
 
-    for (const std::string& seq : sequences)
-    {
-        if (seq.size() >= k)
-            process_sequence(seq);
-        // en-dessous, la séquence est trop courte : nous avons décidé  simplement de l'ignorer (pas de k-mer possible)
+                // --- CONSTRUCTION NOEUD PREFIXE (k-1) ---
+                // Prend k-1 nucléotides à partir de bit_idx
+                uint64_t prefix_val = extractKmerValue(bv, bit_idx, k - 1);
+
+                // --- CONSTRUCTION NOEUD SUFFIXE (k-1) ---
+                // Le suffixe commence 1 nucléotide (2 bits) après le préfixe
+                // et a aussi une longueur de k-1
+                uint64_t suffix_val = extractKmerValue(bv, bit_idx + 2, k - 1);
+
+                // 1. Récupérer ou créer le noeud Prefix
+                Noeud* prefixNode;
+                if (nodes_map.find(prefix_val) == nodes_map.end()) {
+                    prefixNode = new Noeud(prefix_val);
+                    nodes_map[prefix_val] = prefixNode;
+                } else {
+                    prefixNode = nodes_map[prefix_val];
+                }
+
+                // 2. Récupérer ou créer le noeud Suffix
+                Noeud* suffixNode;
+                if (nodes_map.find(suffix_val) == nodes_map.end()) {
+                    suffixNode = new Noeud(suffix_val);
+                    nodes_map[suffix_val] = suffixNode;
+                } else {
+                    suffixNode = nodes_map[suffix_val];
+                }
+
+                // 3. Créer l'arête (ajouter suffixe dans les enfants du préfixe)
+                // Note : On peut ajouter une vérification ici pour éviter les doublons d'arêtes
+                // si on veut un multigraphe ou non. Ici on ajoute simplement.
+                prefixNode->c.push_back(suffixNode);
+            }
+        }
+
+        // Mise à jour pour la prochaine lecture
+        current_read_start = end_pos;
     }
 }
 
-
-// EXTRACTION DES KMERS
-
-/**
- * @brief
- * Parcourt la séquence brute et génère tous les k-mers possibles.
- * Chaque k-mer est ensuite passé à insert_kmer(), qui gère le découpage
- * prefixe/suffixe ((k-1)-mers).
- *
- * Cette fonction traduit directement la logique du j = 0 .. |Fi| - k.
- */
-void GraphDBJ::process_sequence(const string& seq)
-{
-    const size_t limit = seq.size() - k + 1;
-
-    for (size_t j = 0; j < limit; ++j)
-    {
-        string kmer = seq.substr(j, k);
-        insert_kmer(kmer);
+GraphDBJ::~GraphDBJ() {
+    // Nettoyage de la mémoire : delete de tous les pointeurs stockés dans la map
+    for (auto& pair : nodes_map) {
+        delete pair.second;
     }
+    nodes_map.clear();
 }
 
+uint64_t GraphDBJ::extractKmerValue(const BitVector& bv, size_t start_bit_idx, int len_nucleotides) const {
+    uint64_t val = 0;
 
-//  INSERTION PREFIX/SUFFIXE
-/**
- * @brief
- * Concrétise la structure d’un graphe de De Bruijn :
- * 
- *    k-mer = BANANE  (k=6)
- *    prefix = BANAN  (k-1)
- *    suffix = ANANE  (k-1)
- *
- * Nous stockons prefix -> {suffix1, suffix2, ...}
- * Pourquoi "unordered_set" ? Nous avons discuté de l’usage d’une liste versus set. Le set garantit l’unicité des edges sans, à priori, de tri trop coûteux. 
- * Cela limite la duplication inutile et nous simplifie grandement la phase de tri final.
- */
-void GraphDBJ::insert_kmer(const string& kmer)
-{
-    if (kmer.size() != k)
-        return; // garde fou
+    // On parcourt nucléotide par nucléotide
+    for (int i = 0; i < len_nucleotides; ++i) {
+        size_t pos = start_bit_idx + (i * 2);
+        
+        // Lecture des 2 bits
+        bool b1 = bv.test(pos);
+        bool b2 = bv.test(pos + 1);
 
-    const string prefix = kmer.substr(0, k - 1);
-    const string suffix = kmer.substr(1, k - 1);
+        // On décale la valeur actuelle de 2 bits vers la gauche pour faire de la place
+        val = val << 2;
 
-    adjacency[prefix].insert(suffix);
-}
-
-// RECUPERATION DES NOEUDS TRIES
-
-/**
- * @brief
- * Nous avons souvent eu besoin dans certaines étapes en aval d’obtenir une liste
- * canonique et déterministe des (k-1)-mers. Le tri permet de la  reproductibilité, iteration cohérente entre runs,  alignement avec CompareKMers si des analyses croisées sont réalisées.
- * Le tri est effectué sur une copie (pas de mutation interne).
- * @complexity
- * O(V log V) où V = nombre de noeuds (k-1)-mers distincts.
- */
-vector<std::string> GraphDBJ::get_sorted_nodes() const
-{
-    vector<string> nodes;
-    nodes.reserve(adjacency.size());
-
-    for (const auto& entry : adjacency)
-    {
-        nodes.push_back(entry.first);
+        // Construction de la valeur 2 bits (b1b2)
+        // Si b1 est vrai, on ajoute 2 (10 en binaire)
+        // Si b2 est vrai, on ajoute 1 (01 en binaire)
+        if (b1) val |= 2ULL;
+        if (b2) val |= 1ULL;
     }
 
-    sort(nodes.begin(), nodes.end());
-    return nodes;
+    return val;
 }
 
-// ACCÈS DIRECT À LA STRUCTURE D’ADJACENCE
-
-const unordered_map<string, unordered_set<string>>& 
-GraphDBJ::get_graph() const
-{
-    return adjacency;
+std::vector<Noeud*> GraphDBJ::getNodes() const {
+    std::vector<Noeud*> result;
+    result.reserve(nodes_map.size());
+    
+    for (const auto& pair : nodes_map) {
+        result.push_back(pair.second);
+    }
+    return result;
 }

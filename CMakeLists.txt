@@ -8,8 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 1. Create a library from your source code
 add_library(assembler_lib
         src/compare.cpp
-        src/convert.cpp  # <-- ADDED THIS LINE
+        src/convert.cpp
         src/bitvector.cpp
+        src/graphdbj.cpp  # <--- AJOUT ESSENTIEL : Compile le fichier source du graphe
 )
 
 # 2. Tell the library where to find its own headers
@@ -35,8 +36,9 @@ enable_testing()
 include(FetchContent)
 
 FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/refs/heads/main.zip
+        googletest
+        URL https://github.com/google/googletest/archive/refs/heads/main.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP true
 )
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
