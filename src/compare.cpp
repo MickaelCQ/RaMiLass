@@ -7,12 +7,12 @@
 #include <utility> // Pour std::move
 
 // CHANGEMENT: Accepte BitVector
-CompareKMers::CompareKMers(BitVector bit_vector, std::vector<size_t> reads, size_t kmersize)
-    : bit_vector(std::move(bit_vector)), reads(std::move(reads)), kmersize(kmersize) {}
+CompareKMers::CompareKMers(BitVector bitVector, std::vector<size_t> reads, size_t kmersize)
+    : bitVector(std::move(bitVector)), reads(std::move(reads)), kmersize(kmersize) {}
 
 // CHANGEMENT: Accepte BitVector
-CompareKMers::CompareKMers(BitVector bit_vector, std::vector<size_t> reads)
-    : bit_vector(std::move(bit_vector)), reads(std::move(reads)), kmersize(31) {}
+CompareKMers::CompareKMers(BitVector bitVector, std::vector<size_t> reads)
+    : bitVector(std::move(bitVector)), reads(std::move(reads)), kmersize(31) {}
 
 // Setters
 void CompareKMers::set_kmersize(size_t k) {
@@ -25,8 +25,8 @@ size_t CompareKMers::get_kmersize() const {
 }
 
 // Retourne une référence au BitVector interne
-BitVector& CompareKMers::get_bit_vector() {
-    return bit_vector;
+BitVector& CompareKMers::get_bitVector() {
+    return bitVector;
 }
 
 std::vector<size_t>& CompareKMers::get_reads() {
@@ -62,17 +62,17 @@ size_t CompareKMers::get_n_kmers(const size_t ref_read_idx) const {
     return num_nucleotides - kmersize + 1;
 }
 
-size_t CompareKMers::get_all_n_kmers() const {
+size_t CompareKMers::get_all_nKmers() const {
     // CORRECTION: L'ancienne implémentation était boguée.
     // La nouvelle somme le nombre de k-mers de chaque lecture.
     size_t total_kmers = 0;
-    for (size_t i = 0; i < get_n_reads(); ++i) {
+    for (size_t i = 0; i < get_nReads(); ++i) {
         total_kmers += get_n_kmers(i);
     }
     return total_kmers;
 }
 
-size_t CompareKMers::get_n_reads() const {
+size_t CompareKMers::get_nReads() const {
     return reads.size();
 }
 
@@ -90,8 +90,8 @@ size_t CompareKMers::compare_line(const size_t bit_idx1, const size_t bit_idx2) 
         size_t nuc2_bit_start = bit_idx2 + i * 2;
 
         // Compare les deux bits du nucléotide en utilisant l'interface BitVector
-        if (bit_vector.test(nuc1_bit_start)     != bit_vector.test(nuc2_bit_start) ||
-            bit_vector.test(nuc1_bit_start + 1) != bit_vector.test(nuc2_bit_start + 1))
+        if (bitVector.test(nuc1_bit_start)     != bitVector.test(nuc2_bit_start) ||
+            bitVector.test(nuc1_bit_start + 1) != bitVector.test(nuc2_bit_start + 1))
         {
             return 0; // Pas de match, sortie anticipée
         }

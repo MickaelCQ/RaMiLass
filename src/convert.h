@@ -26,7 +26,7 @@
 class Convert
 {
 private:
-    BitVector bit_vector;
+    BitVector bitVector;
     std::vector<size_t> read_end_positions;  // Ending position of a read in bits
 
     /**
@@ -46,13 +46,13 @@ public:
      * @param filename The path to the FASTA file.
      * @throws std::runtime_error if the file cannot be opened.
      */
-    void process_fasta_file(const std::string& filename);
+    void processFile(const std::string& filename);
 
     /**
      * @brief Gets the BitVector containing all reads.
      * @return A const reference to the `BitVector`.
      */
-    const BitVector& get_bit_vector() const;
+    const BitVector& get_bitVector() const;
 
     /**
      * @brief Gets the vector of read end positions.

@@ -18,24 +18,24 @@
  * et un vecteur des positions de fin de chaque lecture (en bits).
  */
 struct CompareKMers {
-    BitVector bit_vector; // Utilisation directe de BitVector au lieu de std::vector<bool>
+    BitVector bitVector; // Utilisation directe de BitVector au lieu de std::vector<bool>
     std::vector<size_t> reads;      // Vecteur des positions de fin de lecture (en bits)
     size_t kmersize = 31;
 
-    CompareKMers(BitVector bit_vector, std::vector<size_t> reads, size_t kmersize);
-    CompareKMers(BitVector bit_vector, std::vector<size_t> reads);
+    CompareKMers(BitVector bitVector, std::vector<size_t> reads, size_t kmersize);
+    CompareKMers(BitVector bitVector, std::vector<size_t> reads);
 
     // Setters
     void set_kmersize(size_t k);
 
     // Getters
     size_t get_kmersize() const;
-    BitVector& get_bit_vector();
+    BitVector& get_bitVector();
     std::vector<size_t>& get_reads();
     size_t get_read_end_pos(size_t read_idx) const;
     size_t get_n_kmers(size_t ref_read_idx) const;
-    size_t get_all_n_kmers() const;
-    size_t get_n_reads() const;
+    size_t get_all_nKmers() const;
+    size_t get_nReads() const;
 
     // Methods
     /**

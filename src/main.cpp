@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
     Convert converter;
     try {
         std::cout << "Traitement du fichier FASTA: " << filename << "..." << std::endl;
-        converter.process_fasta_file(filename);
+        converter.processFile(filename);
     } catch (const std::runtime_error& e) {
         std::cerr << "Erreur lors du traitement du fichier: " << e.what() << std::endl;
         return 1;
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Conversion terminee." << std::endl;
 
-    const BitVector& bit_vector_ref = converter.get_bit_vector();
+    const BitVector& bitVector_ref = converter.get_bitVector();
     std::vector<size_t> read_ends = std::move(converter.get_read_end_positions());
 
     // --- 3. Utiliser CompareKMers avec les données ---
@@ -126,11 +126,11 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    CompareKMers comparer(bit_vector_ref, std::move(read_ends), KMER_SIZE);
+    CompareKMers comparer(bitVector_ref, std::move(read_ends), KMER_SIZE);
 
     // --- 4. Afficher les résultats ---
-    size_t total_reads = comparer.get_n_reads();
-    size_t total_kmers = comparer.get_all_n_kmers();
+    size_t total_reads = comparer.get_nReads();
+    size_t total_kmers = comparer.get_all_nKmers();
 
     std::cout << "-----------------------------------" << std::endl;
     std::cout << "Statistiques :" << std::endl;

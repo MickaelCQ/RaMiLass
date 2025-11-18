@@ -11,14 +11,14 @@
 #include <algorithm> // For std::remove_if
 #include <cctype>    // For ::isspace
 
-void Convert::process_fasta_file(const std::string& filename) {
+void Convert::processFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         throw std::runtime_error("Error: Could not open file " + filename);
     }
 
     // Clear any previous data
-    bit_vector = BitVector();
+    bitVector = BitVector();
     read_end_positions.clear();
 
     size_t total_read_size = 0;
@@ -43,7 +43,7 @@ void Convert::process_fasta_file(const std::string& filename) {
 
     // --- MEMORY RESERVATION ---
     // Reserve space for all bits (2 bits per nucleotide)
-    bit_vector.reserve(total_read_size * 2);
+    bitVector.reserve(total_read_size * 2);
     // Reserve space for all read end positions
     read_end_positions.reserve(total_read_number);
 
@@ -93,15 +93,15 @@ void Convert::convert_and_store_sequence(const std::string& sequence) {
     }
 
     for (char nucleotide : sequence) {
-        bit_vector.addCha(nucleotide);
+        bitVector.addCha(nucleotide);
     }
 
     // Store the *new* cumulative size of the bit vector
-    read_end_positions.push_back(bit_vector.size());
+    read_end_positions.push_back(bitVector.size());
 }
 
-const BitVector& Convert::get_bit_vector() const {
-    return bit_vector;
+const BitVector& Convert::get_bitVector() const {
+    return bitVector;
 }
 
 const std::vector<size_t>& Convert::get_read_end_positions() const {
