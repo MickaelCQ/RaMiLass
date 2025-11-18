@@ -14,7 +14,7 @@ static BitVector bv_from_vector(const std::vector<bool>& v) {
 // A=00, C=10, G=01, T=11
 
 TEST(CompareKMersTest, GettersAndSetters) {
-    // Read 1: "AC" -> {0,0, 1,0}
+    // Read 1: "AC" -> {0,0, 1,0, 0,1}
     // Read 2: "GT" -> {0,1, 1,1}
     std::vector<bool> raw_bv = {false, false, true, false, false, true, true, true};
     std::vector<size_t> re = {4, 8}; // Fin de R1 à 4 bits, fin de R2 à 8 bits
@@ -22,8 +22,12 @@ TEST(CompareKMersTest, GettersAndSetters) {
     CompareKMers comp(bb, re, 2); // k=2
 
     EXPECT_EQ(comp.get_kmersize(), 2);
-    EXPECT_EQ(comp.get_n_reads(), 2);
-    EXPECT_EQ(comp.get_bit_vector().to_vector(), raw_bv);
+
+    // CORRECTION: get_nReads
+    EXPECT_EQ(comp.get_nReads(), 2);
+
+    // CORRECTION: get_bitVector
+    EXPECT_EQ(comp.get_bitVector().to_vector(), raw_bv);
     EXPECT_EQ(comp.get_reads(), re);
 
     comp.set_kmersize(3);
@@ -49,16 +53,18 @@ TEST(CompareKMersTest, ReadAndKmerCounting) {
     EXPECT_EQ(comp.get_read_end_pos(2), 16);
     EXPECT_THROW(comp.get_read_end_pos(3), std::out_of_range);
 
-    // Test get_n_kmers (k=3)
+    // Test get_nKmers (k=3)
     // Read 1 ("ACG"): 3 nucs. (3 - 3 + 1) = 1 k-mer
-    EXPECT_EQ(comp.get_n_kmers(0), 1);
+    // CORRECTION: get_nKmers
+    EXPECT_EQ(comp.get_nKmers(0), 1);
     // Read 2 ("T"): 1 nuc. (1 < 3) = 0 k-mers
-    EXPECT_EQ(comp.get_n_kmers(1), 0);
+    EXPECT_EQ(comp.get_nKmers(1), 0);
     // Read 3 ("CGTA"): 4 nucs. (4 - 3 + 1) = 2 k-mers
-    EXPECT_EQ(comp.get_n_kmers(2), 2);
+    EXPECT_EQ(comp.get_nKmers(2), 2);
 
-    // Test get_all_n_kmers
-    EXPECT_EQ(comp.get_all_n_kmers(), 1 + 0 + 2); // 3 k-mers au total
+    // Test get_all_nKmers
+    // CORRECTION: get_all_nKmers
+    EXPECT_EQ(comp.get_all_nKmers(), 1 + 0 + 2); // 3 k-mers au total
 }
 
 TEST(CompareKMersTest, CompareLine) {

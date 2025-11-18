@@ -30,9 +30,11 @@ protected:
 // Test case for a simple, known sequence
 TEST_F(ConvertTest, ProcessesSimpleSequenceCorrectly) {
     Convert converter;
-    converter.process_fasta_file(test_filename);
+    // CORRECTION: Nom de méthode processFile
+    converter.processFile(test_filename);
 
-    const auto& bit_vec = converter.get_bit_vector();
+    // CORRECTION: Nom de méthode get_bitVector
+    const auto& bit_vec = converter.get_bitVector();
     const auto& end_pos = converter.get_read_end_positions();
 
     // --- Check Read End Positions ---
@@ -85,9 +87,11 @@ TEST(ConvertLoadTest, LoadsRealFastaFile) {
 
 
     // Process the file
-    ASSERT_NO_THROW(converter.process_fasta_file(real_fasta_path));
+    // CORRECTION: Nom de méthode processFile
+    ASSERT_NO_THROW(converter.processFile(real_fasta_path));
 
-    const auto& bit_vec = converter.get_bit_vector();
+    // CORRECTION: Nom de méthode get_bitVector
+    const auto& bit_vec = converter.get_bitVector();
     const auto& end_pos = converter.get_read_end_positions();
 
     // Basic sanity checks for a real file
