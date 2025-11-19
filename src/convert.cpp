@@ -1,7 +1,6 @@
 #include "convert.h"
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <stdexcept>
 #include <algorithm>
@@ -30,7 +29,9 @@ void Convert::processFile(const std::string& filename) {
             total_read_number++;
         } else {
             // Supprime les espaces blancs pour obtenir le vrai compte de nucléotides
-            line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
+            line.erase(std::remove_if(line.begin(), line.end(), [](char c) {
+                return std::isspace(static_cast<unsigned char>(c));
+            }), line.end());
             total_read_size += line.length();
         }
     }
@@ -44,31 +45,31 @@ void Convert::processFile(const std::string& filename) {
     file.clear(); // Efface le flag EOF (End Of File)
     file.seekg(0, std::ios::beg); // Rembobine le fichier au début
 
-    std::stringstream current_sequence_stream;
+    // Utilise std::string au lieu de std::stringstream : plus simple et plus rapide pour la concaténation
+    std::string current_sequence;
 
     while (std::getline(file, line)) {
         if (line.empty()) continue;
 
         if (line[0] == '>') {
-            // En-tête trouvé : on convertit la séquence *précédente* accumulée dans le stream
-            std::string sequence = current_sequence_stream.str();
-            if (!sequence.empty()) {
-                convertSeq(sequence);
+            // En-tête trouvé : on convertit la séquence *précédente* accumulée
+            if (!current_sequence.empty()) {
+                convertSeq(current_sequence);
             }
-            // Réinitialise le stream pour la prochaine lecture
-            current_sequence_stream.str("");
-            current_sequence_stream.clear();
+            // Réinitialise la string pour la prochaine lecture
+            current_sequence.clear();
         } else {
             // Ligne de séquence : nettoyage et mise en tampon (les séquences FASTA peuvent s'étaler sur plusieurs lignes)
-            line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
-            current_sequence_stream << line;
+            line.erase(std::remove_if(line.begin(), line.end(), [](char c) {
+                return std::isspace(static_cast<unsigned char>(c));
+            }), line.end());
+            current_sequence += line;
         }
     }
 
     // Traite la toute dernière lecture (car aucun '>' ne la déclenche après)
-    std::string last_sequence = current_sequence_stream.str();
-    if (!last_sequence.empty()) {
-        convertSeq(last_sequence);
+    if (!current_sequence.empty()) {
+        convertSeq(current_sequence);
     }
 
     file.close();

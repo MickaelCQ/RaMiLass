@@ -274,28 +274,18 @@ std::vector<std::string> GraphDBJ::generateContigs() const {
 
 std::string GraphDBJ::kmerToString(uint64_t val, int length) const {
     std::string seq = "";
-<<<<<<< HEAD
-    // On décode les bits du poids fort vers le poids faible.
-=======
-    // On lit les bits de poids fort vers poids faible (selon ta logique extractKmerValue)
-    // Le premier nucléotide inséré se retrouve aux bits de poids fort.
-    // Pour récupérer l'ordre correct :
->>>>>>> a26f41a ( simplification of some conditional statements (prefixes/suffixes, removal of intermediate variables, and modification of certain loop structures))
+    // On lit les bits de poids fort vers poids faible (selon la logique d'extractKmerValue).
+    // Le premier nucléotide inséré se retrouve aux bits de poids fort. Pour récupérer l'ordre correct,
+    // on extrait les paires de bits de la position la plus significative vers la moins significative.
     for (int i = length - 1; i >= 0; --i) {
         uint64_t mask = 3ULL << (i * 2);
         uint64_t two_bits = (val & mask) >> (i * 2);
 
         // Correspondance inverse à celle définie dans addCha()
         if (two_bits == 0) seq += 'A';       // 00
-<<<<<<< HEAD
         else if (two_bits == 2) seq += 'C';  // 10
         else if (two_bits == 1) seq += 'G';  // 01
         else seq += 'T';                     // 11
-=======
-        else if (two_bits == 2) seq += 'C';  // 10 
-        else if (two_bits == 1) seq += 'G';  // 01 (b1=0, b2=1 => 01 = 1)
-        else seq += 'T';                     // 11 (3)
->>>>>>> a26f41a ( simplification of some conditional statements (prefixes/suffixes, removal of intermediate variables, and modification of certain loop structures))
     }
     return seq;
 }
