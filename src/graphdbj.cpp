@@ -5,7 +5,6 @@
 #include <fstream>
 #include <algorithm>
 
-// --- Helpers Binaires (Statics) ---
 
 // Calcule le complément inverse d'un BitVector complet
 static BitVector getBitVectorReverseComplement(const BitVector& seq) {
@@ -23,16 +22,14 @@ static BitVector getBitVectorReverseComplement(const BitVector& seq) {
         uint8_t comp = nuc ^ 3;
 
         // Ajout au nouveau vecteur
-        // Bit de poids fort (valeur 2)
         rc.push_back((comp & 2) != 0);
-        // Bit de poids faible (valeur 1)
         rc.push_back((comp & 1) != 0);
     }
     return rc;
 }
 
 // Calcule l'overlap (chevauchement) en travaillant uniquement sur les bits
-static int calculateBinaryOverlap(const BitVector& b1, const BitVector& b2, int min_len) {
+int GraphDBJ::calculateBinaryOverlap(const BitVector& b1, const BitVector& b2, int min_len, double error_percent) {
     int max_ov = 0;
     size_t len1 = b1.size() / 2;
     size_t len2 = b2.size() / 2;
@@ -40,16 +37,17 @@ static int calculateBinaryOverlap(const BitVector& b1, const BitVector& b2, int 
 
     for (size_t len = min_len; len <= limit; ++len) {
         int mismatches = 0;
-        int allowed_errors = 2 + (len / 30);
+        // La tolérance d'erreur est basée sur le pourcentage de chevauchement.
+        int allowed_errors = (int)(len * error_percent) + 1; // +1 pour une petite tolérance de base
+
+        // La ligne `int allowed_errors = 2 + (len / 30);` est remplacée
+        // par la logique basée sur `error_percent`.
+
         bool match = true;
 
-        // Comparaison des 'len' derniers nucléotides de b1
-        // avec les 'len' premiers de b2
-
-        size_t start_idx_b1 = (len1 - len); // index en nucléotides
+        size_t start_idx_b1 = (len1 - len);
 
         for (size_t i = 0; i < len; ++i) {
-            // Comparaison bit à bit (2 bits par nucléotide)
             uint8_t n1 = b1.getNucleotideAt(start_idx_b1 + i);
             uint8_t n2 = b2.getNucleotideAt(i);
 
@@ -70,28 +68,24 @@ static int calculateBinaryOverlap(const BitVector& b1, const BitVector& b2, int 
 }
 
 // Vérifie si 'small' est inclus dans 'large' (recherche de sous-séquence binaire exacte)
-static bool isContained(const BitVector& large, const BitVector& small) {
+bool GraphDBJ::isContained(const BitVector& large, const BitVector& small, double error_percent) {
     size_t l_len = large.size() / 2;
     size_t s_len = small.size() / 2;
 
-    // Impossible que le petit contienne le grand
     if (s_len > l_len) return false;
 
-    // Tolérance d'erreur :
-    // On autorise 1 erreur de base + 1 erreur tous les 50 nucléotides (~2%)
-    // Cela permet de gérer les petites variations ou les bouts mal coupés.
-    size_t max_mismatches = 1 + (s_len / 50);
+    // La tolérance d'erreur est basée sur la longueur de la sous-séquence.
+    size_t max_mismatches = (size_t)(s_len * error_percent) + 1; // +1 pour une petite tolérance de base
 
-    // Recherche naïve avec tolérance (Sliding Window)
+    // La ligne `size_t max_mismatches = 1 + (s_len / 50);` est remplacée.
+
     for (size_t i = 0; i <= l_len - s_len; ++i) {
         size_t mismatches = 0;
         bool possible = true;
 
         for (size_t j = 0; j < s_len; ++j) {
-            // Comparaison des nucléotides
             if (large.getNucleotideAt(i + j) != small.getNucleotideAt(j)) {
                 mismatches++;
-                // Si on dépasse le seuil d'erreur, on arrête cette fenêtre
                 if (mismatches > max_mismatches) {
                     possible = false;
                     break;
@@ -99,16 +93,13 @@ static bool isContained(const BitVector& large, const BitVector& small) {
             }
         }
 
-        // Si 'possible' est vrai ici, c'est qu'on a trouvé une correspondance
-        // avec un nombre d'erreurs acceptable. Le petit est donc "contenu".
         if (possible) return true;
     }
-
     return false;
 }
 
 
-std::vector<BitVector> GraphDBJ::mergeContigs(std::vector<BitVector> contigs, int min_overlap) {
+std::vector<BitVector> GraphDBJ::mergeContigs(std::vector<BitVector> contigs, int min_overlap, double overlap_error_percent, double contained_error_percent) {
     std::cout << "--- Post-traitement : Fusion des Contigs ---" << std::endl;
 
     // Tri par longueur (en bits) décroissante
@@ -136,21 +127,20 @@ std::vector<BitVector> GraphDBJ::mergeContigs(std::vector<BitVector> contigs, in
                     bool merged = false;
 
                     // --- TENTATIVE 1 : Orientation Standard ---
-                    if (isContained(master, candidate)) {
+                    // Utilisation du nouveau paramètre
+                    if (isContained(master, candidate, contained_error_percent)) {
                         merged = true;
                     }
-                    else if (int ov = calculateBinaryOverlap(master, candidate, min_overlap); ov > 0) {
-                        // Master -> Candidate (Overlap à la fin de Master)
-                        // On ajoute Candidate en sautant les 'ov' premiers nucléotides
+                    // Utilisation du nouveau paramètre
+                    else if (int ov = calculateBinaryOverlap(master, candidate, min_overlap, overlap_error_percent); ov > 0) {
                         master.append(candidate, ov);
                         merged = true;
                     }
-                    else if (int ov = calculateBinaryOverlap(candidate, master, min_overlap); ov > 0) {
-                        // Candidate -> Master (Overlap à la fin de Candidate)
-                        // On crée un nouveau master : Candidate + (Master sans le début)
+                    // Utilisation du nouveau paramètre
+                    else if (int ov = calculateBinaryOverlap(candidate, master, min_overlap, overlap_error_percent); ov > 0) {
                         BitVector newMaster = candidate;
                         newMaster.append(master, ov);
-                        master = newMaster; // Move assignment
+                        master = newMaster;
                         merged = true;
                     }
 
@@ -158,14 +148,17 @@ std::vector<BitVector> GraphDBJ::mergeContigs(std::vector<BitVector> contigs, in
                     if (!merged) {
                         BitVector candRC = getBitVectorReverseComplement(candidate);
 
-                        if (isContained(master, candRC)) {
+                        // Utilisation du nouveau paramètre
+                        if (isContained(master, candRC, contained_error_percent)) {
                             merged = true;
                         }
-                        else if (int ov = calculateBinaryOverlap(master, candRC, min_overlap); ov > 0) {
+                        // Utilisation du nouveau paramètre
+                        else if (int ov = calculateBinaryOverlap(master, candRC, min_overlap, overlap_error_percent); ov > 0) {
                             master.append(candRC, ov);
                             merged = true;
                         }
-                        else if (int ov = calculateBinaryOverlap(candRC, master, min_overlap); ov > 0) {
+                        // Utilisation du nouveau paramètre
+                        else if (int ov = calculateBinaryOverlap(candRC, master, min_overlap, overlap_error_percent); ov > 0) {
                             BitVector newMaster = candRC;
                             newMaster.append(master, ov);
                             master = newMaster;
@@ -208,16 +201,16 @@ void GraphDBJ::addKmerToBitVector(BitVector& bv, uint64_t val, int length) const
         // 1 (01) -> false, true
         // 3 (11) -> true, true
 
-        bv.push_back((two_bits & 2) != 0); // Bit de poids fort
-        bv.push_back((two_bits & 1) != 0); // Bit de poids faible
+        bv.push_back((two_bits & 2) != 0);
+        bv.push_back((two_bits & 1) != 0);
     }
 }
 
 std::vector<BitVector> GraphDBJ::generateContigs() const {
     std::vector<BitVector> contigs;
     std::unordered_map<Noeud*, bool> visited;
-    const double COVERAGE_RATIO = 1.0;
-    const size_t MAX_CONTIG_LEN = 1000000;
+    const double COVERAGE_RATIO = config.COVERAGE_RATIO;
+    const size_t MAX_CONTIG_LEN = config.MAX_CONTIG_LEN;
 
     for (const auto& pair : nodes_map) {
         Noeud* startNode = pair.second;
@@ -284,13 +277,8 @@ std::vector<BitVector> GraphDBJ::generateContigs() const {
     return contigs;
 }
 
-// ... (Le reste des méthodes : constructeur, resolveBubbles, clipTips restent inchangées
-// car elles utilisent déjà uint64_t ou la structure de graphe) ...
-// Assurez-vous d'inclure le reste du fichier original ici (constructeur, exportToGFA, etc.)
 
-// (Je remets les méthodes non modifiées nécessaires à la compilation pour que le fichier soit complet)
-
-GraphDBJ::GraphDBJ(const Convert& converter, int kmer_size) : k(kmer_size) {
+GraphDBJ::GraphDBJ(const Convert& converter, int kmer_size, const GraphDBJConfig& conf) : k(kmer_size), config(conf) {
     if (k < 2 || k > 32) throw std::invalid_argument("K invalide (2-32)");
     const BitVector& bv = converter.get_bitVector();
     const std::vector<size_t>& read_ends = converter.get_read_end_positions();
@@ -369,12 +357,13 @@ void GraphDBJ::disconnectNodes(Noeud* parent, Noeud* child) {
 }
 
 int GraphDBJ::clipTips() {
-    // Inspiré par la méthode utilisé par minia
     int tips_removed_count = 0;
     bool changed = true;
-    const int TOPO_MAX_LEN = (int)(k * 2.5);
-    const int RCTC_MAX_LEN = k * 10;
-    const double RCTC_RATIO = 2.0;
+
+    // Utilisation des paramètres de configuration interne
+    const size_t TOPO_MAX_LEN = config.TOPO_MAX_LEN;
+    const size_t RCTC_MAX_LEN = config.RCTC_MAX_LEN;
+    const double RCTC_RATIO = config.RCTC_RATIO;
 
     while (changed) {
         changed = false;
@@ -424,18 +413,20 @@ int GraphDBJ::clipTips() {
 }
 
 int GraphDBJ::resolveBubbles() {
-    // ... (Code identique à votre version fournie)
-    // Reprenez le corps de resolveBubbles du fichier original.
-    int search_depth = k * 20;
+    // Utilisation des nouveaux paramètres de configuration interne
+    int search_depth = (int)(k * config.SEARCH_DEPTH_FACTOR);
+    int max_passes = config.MAX_PASSES;
+
     int bubbles_collapsed = 0;
     bool changed = true;
-    int max_passes = 50;
     int pass = 0;
-    while (changed && pass < max_passes) {
+
+    while (changed && pass < max_passes) { // Utilisation de max_passes
         changed = false; pass++;
         std::vector<uint64_t> keys;
         keys.reserve(nodes_map.size());
         for(auto& p : nodes_map) keys.push_back(p.first);
+
         for (uint64_t key : keys) {
             if (nodes_map.find(key) == nodes_map.end()) continue;
             Noeud* s = nodes_map[key];
@@ -444,6 +435,8 @@ int GraphDBJ::resolveBubbles() {
             std::vector<Noeud*> path1, path2;
             path1.push_back(branch1); path2.push_back(branch2);
             Noeud* convergence = nullptr;
+
+            // La boucle utilise search_depth
             for (int step = 0; step < search_depth; ++step) {
                 Noeud* last1 = path1.back();
                 if (last1->c.size() == 1 && !last1->c[0]->removed) path1.push_back(last1->c[0]);
