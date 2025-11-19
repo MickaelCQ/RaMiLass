@@ -6,62 +6,97 @@
 #include <utility>
 #include <cstddef>
 
+/**
+ * @class BitVector
+ * @brief Conteneur spécialisé pour stocker des séquences d'ADN de manière efficace via compression binaire.
+ *
+ * Au lieu de stocker 1 octet (8 bits) par nucléotide (char), cette classe stocke
+ * 2 bits par nucléotide (A=00, C=10, G=01, T=11). Cela réduit l'utilisation mémoire par 4.
+ * Les données sont stockées par blocs de 60 bits (contenant 30 nucléotides par bloc).
+ */
 class BitVector
 {
 protected:
+    // Conteneur de stockage : vecteur de blocs de 60 bits.
+    // std::bitset<60> est optimisé pour les opérations bit à bit.
     std::vector<std::bitset<60>> _bitVector;
-    size_t _sizeElement = 2;            // length of the element in the bitset (not used for basic push_back)
-    size_t _bitCount = 0;               // total number of bits stored
 
-    std::vector<std::pair<char, int>> _listBit;   // list of bit codes associated to a char (optional)
+    size_t _sizeElement = 2;            // Bits par élément (2 pour les nucléotides)
+    size_t _bitCount = 0;               // Nombre total de bits actuellement utilisés
+    std::vector<std::pair<char, int>> _listBit;   // Dictionnaire pour l'encodage (optionnel)
 
 public :
-    /*________Constructor__________*/
+    /*________Constructeurs__________*/
     BitVector();
-    BitVector(int sizeElement);
-    BitVector(int sizeElement, size_t dataSize);
-
-    /*_________Vector-like API (minimal)___________*/
-    void reserve(size_t bits);
-    void push_back(bool bit);
-    size_t size() const;
-    void clear();
-
-    // Convert to a std::vector<bool>
-    std::vector<bool> to_vector() const;
-
-    /*_________Getter/setter___________*/
 
     /**
-    * @brief Size of one element in bits.
-    */
+     * @brief Constructeur définissant la taille de l'élément (défaut 2 pour l'ADN).
+     */
+    BitVector(int sizeElement);
+
+    /**
+     * @brief Constructeur pré-allouant la mémoire.
+     */
+    BitVector(int sizeElement, size_t dataSize);
+
+    /*_________API type Vector (minimaliste)___________*/
+
+    /**
+     * @brief Pré-alloue les blocs mémoire pour éviter les réallocations lors du remplissage.
+     * @param bits Nombre total de bits attendus.
+     */
+    void reserve(size_t bits);
+
+    /**
+     * @brief Ajoute un seul bit à la fin du vecteur.
+     * Gère la logique de saut au bloc suivant quand le bloc actuel est plein.
+     */
+    void push_back(bool bit);
+
+    /**
+     * @brief Retourne le nombre total de bits stockés.
+     */
+    size_t size() const;
+
+    /**
+     * @brief Réinitialise le vecteur (vide le contenu et remet le compteur à 0).
+     */
+    void clear();
+
+    /**
+     * @brief Convertit les bitsets internes en un vecteur booléen standard (pour débogage).
+     */
+    std::vector<bool> to_vector() const;
+
+    /*_________Accesseurs / Mutateurs___________*/
+
     void setSizeElement(int sizeElement);
     int getSizeElement() const;
 
-    /**
-     * @brief Create the dictionary of characters associated with a bits code.
-     */
     void createListBit(const std::string& list);
     const std::vector<std::pair<char, int>>& getListBit() const;
 
     /**
-    * @brief Add a character in bits to the bitvector (interprets nucleotide -> two bits).
-    */
+     * @brief Encode un caractère nucléotidique en 2 bits et les ajoute.
+     * Mapping : A->00, C->10, G->01, T->11.
+     * @param cha Le caractère (A, C, G, T).
+     */
     void addCha(char cha);
 
     /**
-    * @brief Convert back to sequence (naive: interpret every 2 bits as nucleotide using A,C,G,T mapping).
-    */
+     * @brief Décode le vecteur binaire pour retrouver la chaîne ADN originale.
+     * @return Représentation string de la séquence.
+     */
     std::string readBitVector() const;
 
-    // --- accès aux bits ---
+    // --- Accès aux bits ---
     /**
-     * @brief Teste le bit à l'index global `idx`.
+     * @brief Vérifie la valeur d'un bit spécifique à un index global.
+     * Calcule quel bloc et quel décalage (offset) vérifier.
+     * @param idx Index global du bit.
+     * @return true (1) ou false (0).
      */
     bool test(size_t idx) const;
 
-    /**
-     * @brief Opérateur d'indexation pour accéder aux bits.
-     */
     bool operator[](size_t idx) const { return test(idx); }
 };

@@ -1,15 +1,11 @@
-//
-// Created by raphael on 11/13/25.
-//
-
 #include "convert.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <stdexcept>
-#include <algorithm> // For std::remove_if
-#include <cctype>    // For ::isspace
+#include <algorithm>
+#include <cctype>
 
 void Convert::processFile(const std::string& filename) {
     std::ifstream file(filename);
@@ -17,7 +13,7 @@ void Convert::processFile(const std::string& filename) {
         throw std::runtime_error("Error: Could not open file " + filename);
     }
 
-    // Clear any previous data
+    // Réinitialisation de l'état interne
     bitVector = BitVector();
     read_end_positions.clear();
 
@@ -25,60 +21,51 @@ void Convert::processFile(const std::string& filename) {
     size_t total_read_number = 0;
     std::string line;
 
-    // --- FIRST PASS: Calculate total size and read count ---
+    // --- PREMIÈRE PASSE : Statistiques ---
+    // Compte simplement pour optimiser l'allocation mémoire (critique pour les grands génomes).
     while (std::getline(file, line)) {
-        if (line.empty()) {
-            continue; // Skip empty lines
-        }
+        if (line.empty()) continue;
 
         if (line[0] == '>') {
-            total_read_number++; // Found a new read header
+            total_read_number++;
         } else {
-            // This is a sequence line.
-            // Remove any potential whitespace from the line before counting.
+            // Supprime les espaces blancs pour obtenir le vrai compte de nucléotides
             line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
             total_read_size += line.length();
         }
     }
 
-    // --- MEMORY RESERVATION ---
-    // Reserve space for all bits (2 bits per nucleotide)
+    // --- RÉSERVATION MÉMOIRE ---
+    // Réserve 2 bits par nucléotide.
     bitVector.reserve(total_read_size * 2);
-    // Reserve space for all read end positions
     read_end_positions.reserve(total_read_number);
 
-    // --- SECOND PASS: Convert and store data ---
-    // Reset file stream to the beginning
-    file.clear();
-    file.seekg(0, std::ios::beg);
+    // --- SECONDE PASSE : Encodage ---
+    file.clear(); // Efface le flag EOF (End Of File)
+    file.seekg(0, std::ios::beg); // Rembobine le fichier au début
 
     std::stringstream current_sequence_stream;
 
     while (std::getline(file, line)) {
-        if (line.empty()) {
-            continue; // Skip empty lines
-        }
+        if (line.empty()) continue;
 
         if (line[0] == '>') {
-            // This is a header line.
-            // Process the sequence we've built up so far.
+            // En-tête trouvé : on convertit la séquence *précédente* accumulée dans le stream
             std::string sequence = current_sequence_stream.str();
             if (!sequence.empty()) {
                 convertSeq(sequence);
             }
-
-            // Reset the stream for the new sequence
+            // Réinitialise le stream pour la prochaine lecture
             current_sequence_stream.str("");
             current_sequence_stream.clear();
         } else {
-            // This is a sequence line. Append it to our current sequence stream.
-            // We strip any potential whitespace from the line.
+            // Ligne de séquence : nettoyage et mise en tampon (les séquences FASTA peuvent s'étaler sur plusieurs lignes)
             line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
             current_sequence_stream << line;
         }
     }
 
-    // After the loop, process the very last sequence in the file
+    // Traite la toute dernière lecture (car aucun '>' ne la déclenche après)
     std::string last_sequence = current_sequence_stream.str();
     if (!last_sequence.empty()) {
         convertSeq(last_sequence);
@@ -88,15 +75,13 @@ void Convert::processFile(const std::string& filename) {
 }
 
 void Convert::convertSeq(const std::string& sequence) {
-    if (sequence.empty()) {
-        return;
-    }
+    if (sequence.empty()) return;
 
     for (char nucleotide : sequence) {
         bitVector.addCha(nucleotide);
     }
 
-    // Store the *new* cumulative size of the bit vector
+    // Enregistre la frontière de cette lecture dans le flux de bits.
     read_end_positions.push_back(bitVector.size());
 }
 

@@ -2,94 +2,94 @@
 #define ASSEMBLEUR_GRAPHDBJ_H
 
 #include <vector>
-#include <cstdint> // Pour uint64_t
+#include <cstdint>
 #include <unordered_map>
-#include <string>       // NOUVEAU : Nécessaire pour std::string
-#include <algorithm>    // NOUVEAU : Nécessaire pour std::find
+#include <string>
+#include <algorithm>
 #include "convert.h"
 
 /**
  * @struct Noeud
- * @brief Représente un (k-1)-mer dans le graphe de De Bruijn.
+ * @brief Représente un (k-1)-mer dans le Graphe de De Bruijn.
+ * * Dans un graphe de De Bruijn construit à partir de k-mers :
+ * - Les nœuds représentent des séquences de longueur $k-1$.
+ * - Les arêtes représentent la transition vers le $k$-ième nucléotide.
  */
 struct Noeud {
-    uint64_t p;             // L'entier représentant la séquence du (k-1)-mer
-    std::vector<Noeud*> c;  // Vecteur de pointeurs vers les enfants (arêtes sortantes)
+    uint64_t p;             // La séquence du (k-1)-mer encodée en entier 64 bits.
+    std::vector<Noeud*> c;  // Enfants (Arêtes sortantes / Out-edges).
 
-    // --- NOUVEAUX CHAMPS ---
-    std::vector<Noeud*> parents; // Parents (arêtes entrantes) pour remonter le graphe
-    bool removed = false;        // Flag pour suppression logique (Soft delete)
-    uint32_t coverage = 0;       // Compteur de couverture (nombre de fois vu)
+    // --- Métadonnées pour le parcours de graphe ---
+    std::vector<Noeud*> parents; // Parents (Arêtes entrantes / In-edges), crucial pour le parcours inverse (élagage).
+    bool removed = false;        // Flag de suppression logique (évite de supprimer physiquement de la mémoire pendant la simplification).
+    uint32_t coverage = 0;       // Combien de fois ce (k-1)-mer est apparu dans les lectures brutes (couverture).
 
-    // Constructeur pour faciliter la création
     Noeud(uint64_t val) : p(val) {}
 };
 
 /**
  * @class GraphDBJ
- * @brief Construit et simplifie le graphe de De Bruijn.
+ * @brief Construit, simplifie et parcourt le Graphe de De Bruijn.
  */
 class GraphDBJ {
 private:
-    int k; // Taille du k-mer (les noeuds seront de taille k-1)
+    int k; // La taille du k-mer. Note : Les nœuds ont une taille k-1.
 
-    // Hash map pour stocker l'unicité des noeuds
+    // Hash map assurant que chaque (k-1)-mer est unique dans le graphe.
+    // Clé : représentation uint64_t de la séquence. Valeur : Pointeur vers le Noeud.
     std::unordered_map<uint64_t, Noeud*> nodes_map;
 
     /**
-     * @brief Extrait une valeur entière sur 64 bits.
+     * @brief Extrait une sous-chaîne de bits du BitVector et la convertit en uint64_t.
      */
     uint64_t extractKmerValue(const BitVector& bv, size_t start_bit_idx, int len_nucleotides) const;
 
-    // --- NOUVELLES MÉTHODES PRIVÉES (HELPERS) ---
+    // --- Méthodes utilitaires ---
 
     /**
-     * @brief Convertit la valeur uint64_t en chaîne "ACGT".
+     * @brief Décode un uint64_t en string pour l'exportation.
      */
     std::string kmerToString(uint64_t val, int length) const;
 
     /**
-     * @brief Supprime proprement les liens parent<->enfant dans les deux sens.
+     * @brief Supprime le lien entre parent et enfant dans les deux listes d'adjacence.
      */
     void disconnectNodes(Noeud* parent, Noeud* child);
 
     /**
-     * @brief Cherche un point de convergence entre deux branches (pour les bulles).
-     * C'est la déclaration qui manquait pour l'erreur ligne 173.
+     * @brief Heuristique pour trouver où deux branches divergentes se rejoignent (pour éclater les bulles).
      */
     static Noeud* findConvergence(Noeud* branch1, Noeud* branch2, int depth_limit);
 
 public:
     /**
-     * @brief Constructeur. Construit immédiatement le graphe.
+     * @brief Constructeur. Parse l'objet Convert et construit le graphe immédiatement.
      */
     GraphDBJ(const Convert& converter, int kmer_size);
 
     /**
-     * @brief Destructeur pour nettoyer la mémoire.
+     * @brief Destructeur. Nettoie tous les Noeuds alloués dynamiquement.
      */
     ~GraphDBJ();
 
-    /**
-     * @brief Récupère tous les noeuds du graphe.
-     */
     std::vector<Noeud*> getNodes() const;
 
-    // --- NOUVEAUX ALGORITHMES PUBLICS ---
+    // --- Algorithmes d'Assemblage ---
 
     /**
-     * @brief Élagage des pointes (Tip Clipping).
+     * @brief Élagage des pointes (Tip Clipping) : Supprime les courtes branches mortes (souvent erreurs de séquençage en fin de lecture).
+     * @param length_threshold Longueur max d'une pointe pour être supprimée.
      */
     void removeTips(int length_threshold);
 
     /**
-     * @brief Simplification des bulles (Bubble Collapsing).
+     * @brief Résolution des bulles (Bubble Collapsing) : Fusionne les chemins similaires causés par des SNP ou erreurs.
      */
     void resolveBubbles();
 
     /**
-     * @brief Génération des Contigs (extension gloutonne avec couverture).
-     * C'est la déclaration qui manquait pour l'erreur ligne 217.
+     * @brief Génération de Contigs : Parcourt le graphe simplifié pour sortir les séquences assemblées.
+     * Utilise des heuristiques de couverture pour résoudre les ambiguïtés.
      */
     std::vector<std::string> generateContigs() const;
 };

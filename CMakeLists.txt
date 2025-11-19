@@ -6,7 +6,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(GenomeAssembler)
 
+# ----------------------------------------------------
+# Main Library Configuration
+# ----------------------------------------------------
+
 # 1. Create a library from your source code
+# NOTE: src/bitvector.cpp is included here to fix the linker errors
 add_library(assembler_lib
         src/compare.cpp
         src/convert.cpp
@@ -19,6 +24,10 @@ target_compile_definitions(assembler_lib PUBLIC -D_GLIBCXX_USE_CXX11_ABI=1)
 
 # 2. Tell the library where to find its own headers
 target_include_directories(assembler_lib PUBLIC src)
+
+# ----------------------------------------------------
+# Main App Configuration
+# ----------------------------------------------------
 
 # 3. Create your main application executable
 add_executable(assembler_app
@@ -53,6 +62,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 # 7. Create a new directory for test files
+# Note: Ideally list files explicitly, but GLOB works for simple setups
 file(GLOB TEST_FILES "tests/*.cpp")
 
 # 8. Add the test executable

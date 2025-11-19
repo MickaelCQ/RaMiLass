@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <algorithm>
 
+// Constante : Nous utilisons 60 bits par bloc.
 static constexpr size_t BLOCK_BITS = 60;
 
 BitVector::BitVector() = default;
@@ -24,9 +25,11 @@ void BitVector::reserve(size_t bits) {
 void BitVector::push_back(bool bit) {
     size_t idx = _bitCount / BLOCK_BITS;
     size_t offset = _bitCount % BLOCK_BITS;
+
     if (idx >= _bitVector.size()) {
-        _bitVector.emplace_back(); // default
+        _bitVector.emplace_back();
     }
+
     if (bit) {
         _bitVector[idx].set(offset);
     }
@@ -81,20 +84,16 @@ const std::vector<std::pair<char, int>>& BitVector::getListBit() const {
 void BitVector::addCha(char cha) {
     switch (toupper(static_cast<unsigned char>(cha))) {
         case 'A':
-            push_back(false);
-            push_back(false);
+            push_back(false); push_back(false); // 00
             break;
         case 'C':
-            push_back(true);
-            push_back(false);
+            push_back(true); push_back(false);  // 10
             break;
         case 'G':
-            push_back(false);
-            push_back(true);
+            push_back(false); push_back(true);  // 01
             break;
         case 'T':
-            push_back(true);
-            push_back(true);
+            push_back(true); push_back(true);   // 11
             break;
         default:
             throw std::invalid_argument("Invalid nucleotide character: " + std::string(1, cha));
@@ -107,7 +106,7 @@ std::string BitVector::readBitVector() const {
     for (size_t i = 0; i + 1 < _bitCount; i += 2) {
         bool b1 = _bitVector[i / BLOCK_BITS].test(i % BLOCK_BITS);
         bool b2 = _bitVector[(i+1) / BLOCK_BITS].test((i+1) % BLOCK_BITS);
-        // Map back
+
         if (!b1 && !b2) out.push_back('A');
         else if (b1 && !b2) out.push_back('C');
         else if (!b1 && b2) out.push_back('G');
