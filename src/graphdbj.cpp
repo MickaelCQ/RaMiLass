@@ -3,66 +3,57 @@
 #include <stdexcept>
 
 GraphDBJ::GraphDBJ(const Convert& converter, int kmer_size) : k(kmer_size) {
-    if (k <= 1) {
-        throw std::invalid_argument("K doit etre superieur a 1 pour construire un graphe.");
-    }
-    // Un uint64_t a 64 bits. Chaque nucléotide fait 2 bits. Capacité max = 32 nucléotides.
-    // Puisque les nœuds font k-1, k-1 <= 32 implique k <= 33.
-    if (k > 33) {
+    if (k < 2)
+      {
+        throw std::invalid_argument("K doit etre superieur a 2 pour construire un graphe.");    
+      }
+    // Un uint64_t peut stocker jusqu'à 32 nucléotides (64 bits). Donc k-1 doit être <= 32 => k < 32.
+    if (k > 32) 
+      {
         throw std::invalid_argument("Taille de K trop grande pour etre stockee sur 64 bits (max 33).");
-    }
+      }
 
     const BitVector& bv = converter.get_bitVector();
     const std::vector<size_t>& read_ends = converter.get_read_end_positions();
-
     size_t current_read_start = 0;
 
-    // 1. Parcourir chaque lecture (Read)
+
+    // 1. Parcourir des reats 
     for (size_t end_pos : read_ends) {
-        // Calcul de la longueur de la lecture en bits
-        size_t read_len_bits = end_pos - current_read_start;
-        size_t read_len_nuc = read_len_bits / 2;
+        // Calculer la longueur de la lecture en bits
+      size_t read_len_nuc = (end_pos - current_read_start) / 2;
 
         // Si la lecture est assez longue pour contenir au moins un k-mer
         if (read_len_nuc >= (size_t)k) {
             // Sliding Window : Parcourir tous les k-mers de cette lecture
             for (size_t i = 0; i <= read_len_nuc - k; ++i) {
 
-                // Position en bits du début du k-mer courant
-                size_t bit_idx = current_read_start + (i * 2);
+		//Mickael : dégagage/simplification de la variable intermédiaire pr déterminer les suf/préfixes
+		uint64_t prefix_val = extractKmerValue(bv, current_read_start + i * 2, k - 1);
+		uint64_t suffix_val = extractKmerValue(bv, current_read_start + i * 2 + 2, k - 1);
 
-                // --- CONSTRUCTION NOEUD PRÉFIXE (k-1) ---
-                // Prend k-1 nucléotides à partir de bit_idx
-                uint64_t prefix_val = extractKmerValue(bv, bit_idx, k - 1);
-
-                // --- CONSTRUCTION NOEUD SUFFIXE (k-1) ---
-                // Le suffixe commence 1 nucléotide (2 bits) après le préfixe
-                uint64_t suffix_val = extractKmerValue(bv, bit_idx + 2, k - 1);
-
-                // 1. Récupérer ou créer le noeud Prefix
-                Noeud* prefixNode;
-                if (nodes_map.find(prefix_val) == nodes_map.end()) {
-                    prefixNode = new Noeud(prefix_val);
-                    nodes_map[prefix_val] = prefixNode;
-                } else {
-                    prefixNode = nodes_map[prefix_val];
+        	 // 1. Récupérer ou créer le noeud Prefix
+        	 //Mickael: Simplification des conditionnels en dégagant les else (inutile)
+                 Noeud*& prefixNode = nodes_map[prefix_val];
+                if (!prefixNode)
+               {
+    		    prefixNode = new Noeud(prefix_val);
                 }
-                prefixNode->coverage++; // Augmente la couverture car on a vu ce (k-1)-mer
-
-                // 2. Récupérer ou créer le noeud Suffix
-                Noeud* suffixNode;
-                if (nodes_map.find(suffix_val) == nodes_map.end()) {
+                 
+                // 2. Récupérer ou créer les noeuds préfixe & suffixe
+                Noeud*& suffixNode = nodes_map[suffix_val];
+                if (!suffixNode)
+                {
                     suffixNode = new Noeud(suffix_val);
-                    nodes_map[suffix_val] = suffixNode;
-                } else {
-                    suffixNode = nodes_map[suffix_val];
                 }
 
-                // 3. Créer l'arête (Lien Préfixe -> Suffixe)
-                // Vérification pour éviter les doublons d'arêtes (Multigraphe vs Graphe simple)
+        	prefixNode->coverage++, suffixNode->coverage++;
+        
+                // 3. Créer l'arête
+                // Vérifier si l'arête existe déjà pour éviter les doublons (multigraphe vs graphe simple)
                 bool edgeExists = false;
                 for (auto* child : prefixNode->c) {
-                    if (child == suffixNode) { edgeExists = true; break; }
+                    if (child == suffixNode) { edgeExists = true; break;}
                 }
 
                 if (!edgeExists) {
@@ -283,16 +274,28 @@ std::vector<std::string> GraphDBJ::generateContigs() const {
 
 std::string GraphDBJ::kmerToString(uint64_t val, int length) const {
     std::string seq = "";
+<<<<<<< HEAD
     // On décode les bits du poids fort vers le poids faible.
+=======
+    // On lit les bits de poids fort vers poids faible (selon ta logique extractKmerValue)
+    // Le premier nucléotide inséré se retrouve aux bits de poids fort.
+    // Pour récupérer l'ordre correct :
+>>>>>>> a26f41a ( simplification of some conditional statements (prefixes/suffixes, removal of intermediate variables, and modification of certain loop structures))
     for (int i = length - 1; i >= 0; --i) {
         uint64_t mask = 3ULL << (i * 2);
         uint64_t two_bits = (val & mask) >> (i * 2);
 
         // Correspondance inverse à celle définie dans addCha()
         if (two_bits == 0) seq += 'A';       // 00
+<<<<<<< HEAD
         else if (two_bits == 2) seq += 'C';  // 10
         else if (two_bits == 1) seq += 'G';  // 01
         else seq += 'T';                     // 11
+=======
+        else if (two_bits == 2) seq += 'C';  // 10 
+        else if (two_bits == 1) seq += 'G';  // 01 (b1=0, b2=1 => 01 = 1)
+        else seq += 'T';                     // 11 (3)
+>>>>>>> a26f41a ( simplification of some conditional statements (prefixes/suffixes, removal of intermediate variables, and modification of certain loop structures))
     }
     return seq;
 }
