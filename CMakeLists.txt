@@ -1,4 +1,3 @@
-# Add the minimum required CMake version at the very top
 cmake_minimum_required(VERSION 3.10)
 
 # Set C++ standard
@@ -11,18 +10,18 @@ project(GenomeAssembler)
 # ----------------------------------------------------
 
 # 1. Create a library from your source code
-# NOTE: src/bitvector.cpp is included here to fix the linker errors
 add_library(assembler_lib
-        src/compare.cpp
-        src/convert.cpp
-        src/bitvector.cpp
-        src/graphdbj.cpp
+src/compare.cpp
+src/convert.cpp
+src/bitvector.cpp
+src/graphdbj.cpp
 )
 
-# Move definitions to after target creation
+# ABI: Important pour la compatibilité des bibliothèques
 target_compile_definitions(assembler_lib PUBLIC -D_GLIBCXX_USE_CXX11_ABI=1)
 
 # 2. Tell the library where to find its own headers
+# Changé de PUBLIC à PRIVATE si les en-têtes 'src' ne sont pas pour l'utilisateur
 target_include_directories(assembler_lib PUBLIC src)
 
 # ----------------------------------------------------
@@ -31,14 +30,14 @@ target_include_directories(assembler_lib PUBLIC src)
 
 # 3. Create your main application executable
 add_executable(ramilass
-        src/main.cpp
-)
+src/main.cpp
+) 
 
-# Move definitions to after target creation
-target_compile_definitions(ramilass PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
+# ABI: Définition pour l'exécutable principal
+target_compile_definitions(ramilass PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1) 
 
 # 4. Link your main app against your library
-target_link_libraries(ramilass PRIVATE assembler_lib)
+target_link_libraries(ramilass PRIVATE assembler_lib) 
 
 
 # ----------------------------------------------------
@@ -46,40 +45,52 @@ target_link_libraries(ramilass PRIVATE assembler_lib)
 # ----------------------------------------------------
 
 # 5. Enable testing for the project
-enable_testing()
+enable_testing() 
 
 # 6. Use FetchContent to obtain GoogleTest if not available
 include(FetchContent)
 
 FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/archive/refs/heads/main.zip
-        DOWNLOAD_EXTRACT_TIMESTAMP true
+googletest
+URL https://github.com/google/googletest/archive/refs/heads/main.zip
+DOWNLOAD_EXTRACT_TIMESTAMP true
 )
+
+# Conditionnel pour l'option Windows-specific
+if(WIN32)
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+endif()
 
 FetchContent_MakeAvailable(googletest)
 
-# 7. Create a new directory for test files
-# Note: Ideally list files explicitly, but GLOB works for simple setups
-file(GLOB TEST_FILES "tests/*.cpp")
+# 7. List test files explicitly (RECOMMANDÉ)
+# Remplace file(GLOB TEST_FILES "tests/*.cpp")
+set(TEST_FILES
+tests/test_compare.cpp
+tests/test_convert.cpp
+# Ajoutez tous vos autres fichiers de test ici
+)
 
 # 8. Add the test executable
 add_executable(run_tests
-        ${TEST_FILES}
+${TEST_FILES}
 )
 
 # 9. Link the test executable against GTest and your assembler library
 target_link_libraries(run_tests PRIVATE
-        assembler_lib     # <-- Link to your code
-        GTest::gtest      # <-- Link to GTest
-        GTest::gtest_main # <-- Link to GTest main
+assembler_lib     # <-- Link to your code
+GTest::gtest      # <-- Link to GTest
+GTest::gtest_main # <-- Link to GTest main
 )
 
-# Define macro with path to test data directory so tests can find files reliably
-target_compile_definitions(run_tests PRIVATE TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/Tests_Et_Ref")
+# Define macro with path to test data directory and ensure ABI consistency
+target_compile_definitions(run_tests PRIVATE
+TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/Tests_Et_Ref"
+-D_GLIBCXX_USE_CXX11_ABI=1
+)
 
 # 10. Add your test to CTest
 include(GoogleTest)
-gtest_discover_tests(run_tests)
+# Ajout d'un timeout optionnel
+gtest_discover_tests(run_tests TIMEOUT 600) 
