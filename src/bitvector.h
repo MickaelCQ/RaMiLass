@@ -34,7 +34,7 @@ public :
     /**
      *  @brief  add bit at the end.
      *  @complexity : space : O(1), time : O(b).
-     *  b = nb de block. (pire cas, sinon O(1))
+     *  b = nb de block. (pire cas, sinon O(1) amortie en temps)
      * **/
     void push_back(bool bit);
 
@@ -88,7 +88,7 @@ public :
    /**
     *  @brief  add caracter to bitvector.
     *  @complexity : space : O(b), time : O(b).
-    *  b = nb de block. (pire cas, sinon O(1) en temps et espace)
+    *  b = nb de block. (pire cas, sinon O(1) amortie en temps et espace)
     * **/
     void addCha(char cha);
 
