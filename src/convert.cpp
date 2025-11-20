@@ -10,7 +10,8 @@ using namespace std;
 
 void Convert::processFile(const string& filename) {
     ifstream file(filename);
-    if (!file.is_open()) {
+    if (!file.is_open()) 
+    {
         throw runtime_error("Error: Could not open file " + filename);
     }
 
