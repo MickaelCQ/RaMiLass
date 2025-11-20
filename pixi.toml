@@ -22,7 +22,7 @@ description = "Run the test suite"
 
 [tasks.start]
 args = [
-    { "arg" = "file", "default" = "./Tests_Et_Ref/reads.fasta" },
+    { "arg" = "file", "default" = "./data/reads.fasta" },
     { "arg" = "output_tsv", "default" = "ramilass" },
 ]
 cmd = "./build/ramilass {{ file }} {{ output_tsv }} --fuse --gfa"
@@ -34,8 +34,8 @@ description = "Run the app"
 
 [tasks.tofasta]
 args = [
-    { "arg" = "input", "default" = "./Tests_Et_Ref/reads.fastq.fq" },
-    { "arg" = "output", "default" = "./Tests_Et_Ref/reads.fasta" }]
+    { "arg" = "input", "default" = "./data/reads.fastq.fq" },
+    { "arg" = "output", "default" = "./data/reads.fasta" }]
 cmd = "sed ':a;N;$!ba;s/+\\n/+/g' {{ input }} | grep -v \"^+\" | sed \"s/@/>/g\" > {{ output }}"
 
 [dependencies]

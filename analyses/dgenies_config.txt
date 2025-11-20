@@ -1,0 +1,3 @@
+type=align id_job=Ramilass_unfused tool=minimap2 options=repeat:many query=reads_unfused.contigs.fasta target=varankomodo_reference.fasta
+type=align id_job=Ramilass_fused tool=minimap2 options=repeat:many query=reads.contigs.fasta target=varankomodo_reference.fasta
+type=align id_job=Minia tool=minimap2 options=repeat:many query=minia.contigs.fa target=varankomodo_reference.fasta
