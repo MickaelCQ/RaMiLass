@@ -20,7 +20,7 @@ void Convert::processFile(const string& filename) {
     endPos.clear();
 
     size_t totReadSize = 0;
-    size_t total_read_number = 0;
+    size_t totReadNum = 0;
     string line;
     
     string cSeq;
@@ -28,7 +28,7 @@ void Convert::processFile(const string& filename) {
     // --- RÉSERVATION MÉMOIRE ---
     // Réserve 2 bits par nucléotide.
     bitVector.reserve(totReadSize * 2);
-    endPos.reserve(total_read_number);
+    endPos.reserve(totReadNum);
     
     // --- Statistiques ---
     // Compte simplement pour optimiser l'allocation mémoire (critique pour les grands génomes).
@@ -36,7 +36,7 @@ void Convert::processFile(const string& filename) {
         if (line.empty()) continue;
 
         if (line[0] == '>') {
-            total_read_number++;
+            totReadNum++;
           if (!cSeq.empty()) {
             convertSeq(cSeq);
             cSeq.clear();
