@@ -34,8 +34,8 @@ TEST_F(ConvertTest, ProcessesSimpleSequenceCorrectly) {
     converter.processFile(test_filename);
 
     // CORRECTION: Nom de méthode get_bitVector
-    const auto& bit_vec = converter.get_bitVector();
-    const auto& end_pos = converter.get_read_end_positions();
+    const auto& bit_vec = converter.getBitVector();
+    const auto& end_pos = converter.getEndPos();
 
     // --- Check Read End Positions ---
     // We expect two reads
@@ -91,8 +91,8 @@ TEST(ConvertLoadTest, LoadsRealFastaFile) {
     ASSERT_NO_THROW(converter.processFile(real_fasta_path));
 
     // CORRECTION: Nom de méthode get_bitVector
-    const auto& bit_vec = converter.get_bitVector();
-    const auto& end_pos = converter.get_read_end_positions();
+    const auto& bit_vec = converter.getBitVector();
+    const auto& end_pos = converter.getEndPos();
 
     // Basic sanity checks for a real file
     EXPECT_GT(bit_vec.size(), 0);
