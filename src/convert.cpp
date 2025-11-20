@@ -70,10 +70,10 @@ void Convert::convertSeq(const string& sequence) {
     endPos.push_back(bitVector.size());
 }
 
-const BitVector& Convert::get_bitVector() const {
+const BitVector& Convert::getBitVector() const {
     return bitVector;
 }
 
-const vector<size_t>& Convert::get_endPos() const {
+const vector<size_t>& Convert::getEndPos() const {
     return endPos;
 }

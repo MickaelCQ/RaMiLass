@@ -48,13 +48,13 @@ public:
      * @brief get BitVector.
      * @complexity : space : O(1), time : O(1).
      */
-    const BitVector& get_bitVector() const;
+    const BitVector& getBitVector() const;
 
     /**
      * @brief get read end positions.
      * @complexity : space : O(1), time : O(1).
      */
-    const std::vector<size_t>& get_endPos() const;
+    const std::vector<size_t>& getEndPos() const;
 };
 
 #endif //ASSEMBLEUR_CONVERT_H
