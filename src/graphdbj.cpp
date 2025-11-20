@@ -762,3 +762,43 @@ void GraphDBJ::exportToGFA(const std::string& filename) const {
     }
     out.close();
 }
+
+int GraphDBJ::removeLowDepthKmers(uint32_t threshold) {
+    if (threshold <= 1) return 0; // Rien à faire si le seuil est 1 ou moins
+
+    int removed_count = 0;
+
+    // On parcourt tous les noeuds
+    for (auto& pair : nodes_map) {
+        Noeud* node = pair.second;
+
+        // Si le noeud est actif et sous le seuil
+        if (!node->removed && node->coverage < threshold) {
+            node->removed = true;
+            removed_count++;
+
+            // 1. On retire ce noeud de la liste des enfants de ses parents
+            for (Noeud* parent : node->parents) {
+                // Idiome erase-remove pour supprimer 'node' du vecteur 'parent->c'
+                parent->c.erase(
+                    std::remove(parent->c.begin(), parent->c.end(), node),
+                    parent->c.end()
+                );
+            }
+
+            // 2. On retire ce noeud de la liste des parents de ses enfants
+            for (Noeud* child : node->c) {
+                child->parents.erase(
+                    std::remove(child->parents.begin(), child->parents.end(), node),
+                    child->parents.end()
+                );
+            }
+
+            // 3. On vide les vecteurs du noeud supprimé pour gagner un peu de mémoire
+            node->parents.clear();
+            node->c.clear();
+        }
+    }
+
+    return removed_count;
+}

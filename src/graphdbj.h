@@ -53,6 +53,8 @@ struct GraphDBJConfig {
     double RCTC_MAX_RATIO = 10;    ///< Ratio max utilisé pour le calcul interne.
     double TOPO_MAX_RATIO = 2.5;   ///< Facteur multiplicateur de k pour définir la longueur topologique max.
 
+    uint32_t MIN_DEPTH = 1; ///< Profondeur minimale pour qu'un noeud soit conservé dans le graphe.
+
     /** * @brief Ratio de couverture (Parent / Pointe).
      * Si couverture(Parent) > couverture(Pointe) * RCTC_RATIO, la pointe est probablement une erreur.
      */
@@ -201,6 +203,13 @@ public:
      * Utilise une approche de "Deep Seeding" et gère les inclusions.
      */
     static void mergeContigs(std::vector<BitVector>& contigs, int min_overlap, double overlap_error_percent, double contained_error_percent);
+
+    /**
+     * @brief Supprime les noeuds dont la profondeur est inférieure au seuil donné.
+     * @param threshold Seuil minimum (ex: si 2, on supprime tout ce qui a profondeur < 2).
+     * @return Le nombre de noeuds supprimés.
+     */
+    int removeLowDepthKmers(uint32_t threshold);
 };
 
 #endif //ASSEMBLEUR_GRAPHDBJ_H
