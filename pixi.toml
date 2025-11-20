@@ -38,16 +38,38 @@ args = [
     { "arg" = "output", "default" = "./data/reads.fasta" }]
 cmd = "sed ':a;N;$!ba;s/+\\n/+/g' {{ input }} | grep -v \"^+\" | sed \"s/@/>/g\" > {{ output }}"
 
-[tasks._build_debug]
+[feature.memcheck.tasks._build_debug]
 cmd = "rm -r build && cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build"
 
-[tasks.check_memory]
+[feature.memcheck.tasks.check_memory]
 cmd = "valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-origins=yes build/ramilass data/reads.fasta --fuse"
 description = "Check memory leaks using Valgrind"
 
 [dependencies]
 cmake = ">=4.1.2,<5"
 gtest = ">=1.17.0,<2"
+
+[feature.bench.dependencies]
 minia = { version = ">=3.2.6,<4", channel = "bioconda" }
 quast = { version = ">=5.3.0,<6", channel = "bioconda" }
+spades = { version = ">=4.2.0,<5", channel = "bioconda" }
+
+[feature.memcheck.dependencies]
 valgrind = ">=3.25.1,<4"
+
+[feature.plot.dependencies]
+python = ">=3.8,<3.13"
+
+[feature.plot.pypi-dependencies]
+seaborn = "*"
+pandas = "*"
+matplotlib = "*"
+
+[feature.plot.tasks.plotit]
+cmd = "cd benchmark && python -s plot.py"
+description = "Generate plots from benchmark results"
+
+[environments]
+plot = { features = ["plot"], no-default-feature = true }
+memcheck = { features = ["memcheck"], no-default-feature = true }
+bench = { features = ["bench"], no-default-feature = true }

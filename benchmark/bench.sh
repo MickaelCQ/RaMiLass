@@ -2,18 +2,20 @@
 
 # --- Configuration ---
 RUNS=10
+# Utilise des chemins absolus si possible, ou relatifs safe
 DATA_FILE="$(pwd -P)/../data/reads.fasta"
+RESULTS_FILE="benchmark_results_raw.tsv"
 
 # Commands to benchmark
 # We silence standard output (> /dev/null) to keep the terminal clean
-CMD_MINIA="pixi run minia -in $DATA_FILE"
-CMD_RAMILASS="pixi run ramilass $DATA_FILE bench --debug --fuse"
+CMD_MINIA="pixi run -e bench minia -in $DATA_FILE -out /tmp/minia_out"
+CMD_RAMILASS="pixi run ramilass $DATA_FILE /tmp/ramilass_out --debug --fuse"
+CMD_SPADES="pixi run -e bench spades.py --only-assembler -s $DATA_FILE -o /tmp/spades_out"
 
 # Check for GNU time
 TIME_CMD="/usr/bin/time"
 if [ ! -f "$TIME_CMD" ]; then
     echo "Error: GNU time not found at $TIME_CMD."
-    echo "Please install it (e.g., 'sudo apt install time' or 'brew install gnu-time')."
     exit 1
 fi
 
@@ -21,57 +23,39 @@ fi
 run_benchmark() {
     local tool_name="$1"
     local cmd_string="$2"
-    local tmp_file="${tool_name}_metrics.txt"
+    local tmp_file="${tool_name}_raw_metrics.txt"
 
-    echo "---------------------------------------------------"
-    echo "Starting benchmark for: $tool_name ($RUNS runs)"
-    echo "${cmd_string}"
-    echo "---------------------------------------------------"
+    # >&2 envoie le texte vers le terminal même si on redirige la sortie vers un fichier
+    echo "---------------------------------------------------" >&2
+    echo "Starting benchmark for: $tool_name ($RUNS runs)" >&2
+    echo "${cmd_string}" >&2
+    echo "---------------------------------------------------" >&2
 
-    # Clear previous metrics file
+    # 1. Exécuter la série de tests
     > "$tmp_file"
 
-    total_start_time=$(date +%s%N)
-
     for ((i=1; i<=RUNS; i++)); do
-        # Print progress bar
-        echo -ne "Run $i/$RUNS... \r"
+        echo -ne "Run $i/$RUNS... \r" >&2  # La barre de progression va sur l'écran
 
-        # Run command wrapped in /usr/bin/time
-        # -f "%e %M" outputs: Elapsed_Seconds Max_RSS_KB
-        # -o appends stats to our tmp file
-        # stdout is sent to /dev/null to hide tool output
+        # On exécute la commande
+        # On redirige stdout et stderr de l'outil vers /dev/null pour ne pas polluer
         $TIME_CMD -f "%e %M" -o "$tmp_file" --append $cmd_string > /dev/null 2>&1
     done
 
-    total_end_time=$(date +%s%N)
-    echo -e "\nDone."
+    echo -e "\nDone." >&2
 
-    # --- Calculate Statistics using awk ---
-    # We read the tmp_file which contains lines like: "0.54 24000"
+    # 2. Formater les résultats pour le TSV
+    # Awk imprime sur stdout (sortie standard), c'est SEULEMENT ça qui ira dans le fichier
     awk -v name="$tool_name" '
     BEGIN {
-        sum_time=0; max_mem=0; sum_mem=0;
+        i=1;
     }
     {
-        # $1 is time (seconds), $2 is memory (KB)
-        sum_time += $1;
-        sum_mem += $2;
-        if ($2 > max_mem) max_mem = $2;
-    }
-    END {
-        avg_time = sum_time / NR;
-        avg_mem_mb = (sum_mem / NR) / 1024;
-        max_mem_mb = max_mem / 1024;
-
-        print "\n📊 Results for " name ":";
-        printf "  Total Wall Time (%d runs): %.2f seconds\n", NR, sum_time;
-        printf "  Average Time per run:     %.4f seconds\n", avg_time;
-        printf "  Average Peak Memory:      %.2f MB\n", avg_mem_mb;
-        printf "  Max Peak Memory:          %.2f MB\n", max_mem_mb;
+        # Format: ToolName <tab> RunID <tab> Time <tab> Memory
+        printf "%s\t%d\t%s\t%s\n", name, i++, $1, $2;
     }' "$tmp_file"
 
-    # Clean up
+    # 3. Nettoyer
     rm "$tmp_file"
 }
 
@@ -79,13 +63,21 @@ run_benchmark() {
 
 echo "Benchmark initialized. Running $RUNS iterations per tool."
 
-# 1. Run Minia
-run_benchmark "Minia" "$CMD_MINIA"
+# 1. Initialiser le fichier TSV avec l'en-tête
+echo -e "Tool_Name\tRun_ID\tElapsed_Time_s\tMax_RSS_KB" > $RESULTS_FILE
 
-echo ""
+# 2. Run Minia (Les logs vont à l'écran, les données vont dans le fichier)
+run_benchmark "Minia" "$CMD_MINIA" >> $RESULTS_FILE
 
-# 2. Run Ramilass (Your Assembly)
-run_benchmark "Ramilass" "$CMD_RAMILASS"
+# 3. Run Ramilass
+run_benchmark "Ramilass" "$CMD_RAMILASS" >> $RESULTS_FILE
+
+# 4. Run SPAdes
+run_benchmark "SPAdes" "$CMD_SPADES" >> $RESULTS_FILE
+
+# Nettoyage final
+rm -rf /tmp/spades_out /tmp/minia_out /tmp/ramilass_out > /dev/null 2>&1
 
 echo "---------------------------------------------------"
-echo "Benchmark Complete."
+echo "Benchmark Complete. Raw results saved in $RESULTS_FILE"
+echo "---------------------------------------------------"
