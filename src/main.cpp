@@ -242,7 +242,7 @@ int main(int argc, char* argv[]) {
         int min_overlap = k_size / 2;
         // On peut rendre min_overlap configurable si besoin, ici hardcodé à k/2
 
-        contigs = GraphDBJ::mergeContigs(
+        GraphDBJ::mergeContigs(
             contigs,
             min_overlap,
             config.ERROR_PERCENT_OVERLAP,
