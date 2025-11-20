@@ -50,15 +50,11 @@ struct GraphDBJConfig {
     size_t TOPO_MAX_LEN;    ///< Longueur max (en noeuds) pour supprimer une pointe basée uniquement sur la topologie.
     size_t RCTC_MAX_LEN;    ///< Longueur max (en noeuds) pour supprimer une pointe en considérant aussi la couverture.
 
-    double RCTC_MAX_RATIO = 10;    ///< Ratio max utilisé pour le calcul interne.
     double TOPO_MAX_RATIO = 2.5;   ///< Facteur multiplicateur de k pour définir la longueur topologique max.
+    double RCTC_MAX_RATIO = 5;    ///< Ratio max utilisé pour le calcul interne.
+
 
     uint32_t MIN_DEPTH = 1; ///< Profondeur minimale pour qu'un noeud soit conservé dans le graphe.
-
-    /** * @brief Ratio de couverture (Parent / Pointe).
-     * Si couverture(Parent) > couverture(Pointe) * RCTC_RATIO, la pointe est probablement une erreur.
-     */
-    double RCTC_RATIO = 2.0;
 
     /** * @brief Ratio de couverture pour choisir la branche principale lors de la génération de contigs.
      * Utilisé pour désambiguïser les bifurcations non résolues.

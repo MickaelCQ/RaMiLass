@@ -555,7 +555,6 @@ int GraphDBJ::clipTips() {
 
     const size_t TOPO_MAX_LEN = config.TOPO_MAX_LEN;
     const size_t RCTC_MAX_LEN = config.RCTC_MAX_LEN;
-    const double RCTC_RATIO = config.RCTC_RATIO;
 
     // Boucle tant qu'on trouve des tips à supprimer
     while (changed) {
@@ -610,7 +609,7 @@ int GraphDBJ::clipTips() {
                 // Critère 1 : Très court (Topologique)
                 if (len <= TOPO_MAX_LEN) should_remove = true;
                 // Critère 2 : Court et couverture faible par rapport à l'ancrage
-                else if (len <= RCTC_MAX_LEN && anchor_cov > (tip_avg_cov * RCTC_RATIO)) should_remove = true;
+                else if (len <= RCTC_MAX_LEN && anchor_cov >= tip_avg_cov) should_remove = true;
 
                 if (should_remove) {
                     disconnectNodes(anchor, last_tip_node); // Coupe le lien avec le graphe

@@ -6,12 +6,14 @@
 #include <chrono>
 #include <cstring>
 #include <iomanip>
+#include <filesystem>
 
 #include "graphdbj.h"
 #include "convert.h"
 #include "compare.h"
 
-// Variable globale pour le mode debug
+namespace fs = std::filesystem;
+
 bool DEBUG_MODE = false;
 
 // --- Fonction utilitaire pour mesurer le temps ---
@@ -45,18 +47,17 @@ void print_banner() {
 ██╔══██╗██╔══██║██║╚██╔╝██║██║██║     ██╔══██║╚════██║╚════██║
 ██║  ██║██║  ██║██║ ╚═╝ ██║██║███████╗██║  ██║███████║███████║
 ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝
-
     )" << std::endl;
 }
 
-// --- Affichage de l'aide ---
 void print_usage(const char* prog_name, const GraphDBJConfig& def_conf) {
     print_banner();
-    std::cout << "Usage: " << prog_name << " <input.fasta> <output_prefix> [OPTIONS]\n\n"
-              << "Arguments obligatoires:\n"
+    std::cout << "Usage: " << prog_name << " <input.fasta> [output_dir] [OPTIONS]\n\n"
+              << "Arguments:\n"
               << "  <input.fasta>        Fichier contenant les lectures (FASTA)\n"
-              << "  <output_prefix>      Prefixe pour les fichiers de sortie\n\n"
+              << "  [output_dir]         Dossier de sortie (Optionnel, defaut: .)\n\n"
               << "Options Generales:\n"
+              << "  -o, --out-name <str> Nom de base pour les fichiers de sortie (au lieu du nom d'entree)\n"
               << "  -k <int>             Taille des k-mers (defaut: 31)\n"
               << "  --fuse               Activer l'etape de fusion des contigs (defaut: inactif)\n"
               << "  --gfa                Exporter le graphe au format GFA (defaut: non)\n"
@@ -64,50 +65,74 @@ void print_usage(const char* prog_name, const GraphDBJConfig& def_conf) {
               << "  --debug              Afficher les temps d'execution et infos detailles\n"
               << "  --help, -h           Afficher ce message\n\n"
               << "Options de l'Assembleur (GraphDBJ):\n"
-              << "  --simplification-passes <int>       Nb max de passes de simplification (defaut: " << def_conf.MAX_PASSES << ")\n"
-              << "  --popping-passes <int>        Nb max de passes de suppression de tips et bulle (defaut: 10" << ")\n\n"
-              << "  --overlap-err <dbl>  % d'erreur autorise pour chevauchement (defaut: " << def_conf.ERROR_PERCENT_OVERLAP << ")\n"
-              << "  --contained-err <dbl>% d'erreur autorise pour inclusion (defaut: " << def_conf.ERROR_PERCENT_CONTAINED << ")\n\n"
-              << "  --cov-ratio <dbl>    Ratio de couverture pour bifurcations (defaut: " << def_conf.COVERAGE_RATIO << ")\n"
-              << "  --tip-ratio <dbl>    Ratio couverture ancrage/bout (defaut: " << def_conf.RCTC_RATIO << ")\n\n"
-              << "  --search-depth <dbl> Facteur de profondeur de recherche (defaut: " << def_conf.SEARCH_DEPTH_FACTOR << ")\n"
-              << "  --min-depth <int>      Couverture min. pour garder un k-mer (defaut: 1)\n"
+              << "  --simplification-passes <int> Nb max de passes de simplification (defaut: " << def_conf.MAX_PASSES << ")\n"
+              << "  --popping-passes <int>        Nb max de passes de suppression de tips/bulles (defaut: 10)\n\n"
+              << "  --overlap-err <dbl>    % d'erreur autorise pour chevauchement (defaut: " << def_conf.ERROR_PERCENT_OVERLAP << ")\n"
+              << "  --contained-err <dbl>  % d'erreur autorise pour inclusion (defaut: " << def_conf.ERROR_PERCENT_CONTAINED << ")\n\n"
+              << "  --cov-ratio <dbl>      Ratio de couverture pour bifurcations (defaut: " << def_conf.COVERAGE_RATIO << ")\n"
+              << "  --tip-topo-ratio <dbl> Ratio couverture pour Tip Topologique (defaut: " << def_conf.TOPO_MAX_RATIO << ")\n"
+              << "  --tip-rctc-ratio <dbl> Ratio couverture pour Tip RCTC (defaut: " << def_conf.RCTC_MAX_RATIO << ")\n\n"
+              << "  --search-depth <dbl>   Facteur de profondeur de recherche (defaut: " << def_conf.SEARCH_DEPTH_FACTOR << ")\n"
+              << "  --min-cov <int>        Couverture min. pour garder un k-mer (defaut: 1)\n"
+              << "  --max-contig-len <int> Longueur max d'un contig genere (defaut: " << def_conf.MAX_CONTIG_LEN << ")\n"
               << std::endl;
 }
 
 int main(int argc, char* argv[]) {
-    // 1. Gestion des arguments
-    if (argc < 3) {
+    if (argc < 2) {
         print_usage(argv[0], GraphDBJConfig(31));
         return 1;
     }
 
     std::string filename = argv[1];
-    std::string output_prefix = argv[2];
+    std::string output_dir = ".";
+    int arg_start_index = 2;
+
+    // Vérifie si le 2ème argument est un dossier ou une option
+    if (argc > 2 && argv[2][0] != '-') {
+        output_dir = argv[2];
+        arg_start_index = 3;
+    }
+
+    if (!fs::exists(output_dir)) {
+        try {
+            fs::create_directories(output_dir);
+        } catch (const fs::filesystem_error& e) {
+            std::cerr << "Erreur: Impossible de creer le dossier " << output_dir << "\n" << e.what() << std::endl;
+            return 1;
+        }
+    }
 
     // Paramètres par défaut
     int k_size = 31;
+    std::string custom_output_name = "";
     bool export_gfa = false;
     bool enable_fusion = false;
     int min_output_len = 62;
     int min_depth = 1;
 
-    // Paramètres optionnels de config
+    // Paramètres optionnels de config (-1 ou -1.0 indique "pas défini par l'user")
     int max_passes = -1;
     int max_passes_pop = 10;
+    int max_contig_len = -1; // NOUVEAU
     double overlap_err = -1.0;
     double contained_err = -1.0;
     double cov_ratio = -1.0;
     double tip_ratio = -1.0;
+    double tip_rctc_ratio = -1.0; // NOUVEAU
     double search_depth = -1.0;
 
-    // Parsing manuel des arguments restants
-    for (int i = 3; i < argc; ++i) {
+    // Parsing manuel
+    for (int i = arg_start_index; i < argc; ++i) {
         std::string arg = argv[i];
 
         if (arg == "-k") {
             if (i + 1 < argc) k_size = std::stoi(argv[++i]);
             else { std::cerr << "Erreur: -k necessite une valeur." << std::endl; return 1; }
+        }
+        else if (arg == "-o" || arg == "--out-name") {
+            if (i + 1 < argc) custom_output_name = argv[++i];
+            else { std::cerr << "Erreur: -o necessite un nom." << std::endl; return 1; }
         }
         else if (arg == "--fuse") {
             enable_fusion = true;
@@ -122,6 +147,7 @@ int main(int argc, char* argv[]) {
             if (i + 1 < argc) min_output_len = std::stoi(argv[++i]);
             else { std::cerr << "Erreur: --min-len necessite une valeur." << std::endl; return 1; }
         }
+        // --- Paramètres GraphDBJConfig ---
         else if (arg == "--simplification-passes") {
             if (i + 1 < argc) max_passes = std::stoi(argv[++i]);
         }
@@ -137,11 +163,17 @@ int main(int argc, char* argv[]) {
         else if (arg == "--cov-ratio") {
             if (i + 1 < argc) cov_ratio = std::stod(argv[++i]);
         }
-        else if (arg == "--tip-ratio") {
+        else if (arg == "--tip-ratio") { // Pour TOPO_MAX_RATIO
             if (i + 1 < argc) tip_ratio = std::stod(argv[++i]);
+        }
+        else if (arg == "--tip-rctc-ratio") { // Pour RCTC_MAX_RATIO (NOUVEAU)
+            if (i + 1 < argc) tip_rctc_ratio = std::stod(argv[++i]);
         }
         else if (arg == "--search-depth") {
             if (i + 1 < argc) search_depth = std::stod(argv[++i]);
+        }
+        else if (arg == "--max-contig-len") { // (NOUVEAU)
+            if (i + 1 < argc) max_contig_len = std::stoi(argv[++i]);
         }
         else if (arg == "--min-cov") {
             if (i + 1 < argc) min_depth = std::stoi(argv[++i]);
@@ -162,35 +194,62 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // --- Calcul du nom de sortie ---
+    // Si l'utilisateur a fourni un nom via -o, on l'utilise.
+    // Sinon, on prend le "stem" (nom sans extension) du fichier d'entrée.
+    fs::path input_path(filename);
+    std::string base_filename;
+
+    if (!custom_output_name.empty()) {
+        base_filename = custom_output_name;
+    } else {
+        base_filename = input_path.stem().string();
+    }
+
+    // Construction du prefixe complet : output_dir/base_filename
+    fs::path prefix_path = fs::path(output_dir) / base_filename;
+    std::string output_prefix = prefix_path.string();
+
     // --- Initialisation ---
     std::cout << "=== Assembleur GraphDBJ ===" << std::endl;
     std::cout << "Entree  : " << filename << std::endl;
-    std::cout << "Sortie  : " << output_prefix << ".*" << std::endl;
+    std::cout << "Dossier : " << output_dir << std::endl;
+    std::cout << "Prefixe : " << output_prefix << std::endl;
     std::cout << "K-mer   : " << k_size << std::endl;
     std::cout << "Min Cov : " << min_depth << std::endl;
-    std::cout << "Min Len : " << (min_output_len != -1 ? std::to_string(min_output_len) : "k (" + std::to_string(k_size) + ")") << std::endl;
-
-    std::cout << "Fusion  : " << (enable_fusion ? "ACTIVEE" : "DESACTIVEE") << std::endl;
-    if (DEBUG_MODE) std::cout << "Mode    : DEBUG (Timers actifs)" << std::endl;
 
     Timer<std::chrono::milliseconds> total_timer("EXECUTION TOTALE");
 
-    // Configuration de l'objet Config
+    // --- Configuration de l'objet Config ---
     GraphDBJConfig config(k_size);
+    config.MIN_DEPTH = min_depth;
+
     if (max_passes != -1) config.MAX_PASSES = max_passes;
+    if (max_contig_len != -1) config.MAX_CONTIG_LEN = (size_t)max_contig_len;
     if (overlap_err != -1.0) config.ERROR_PERCENT_OVERLAP = overlap_err;
     if (contained_err != -1.0) config.ERROR_PERCENT_CONTAINED = contained_err;
     if (cov_ratio != -1.0) config.COVERAGE_RATIO = cov_ratio;
-    if (tip_ratio != -1.0) config.RCTC_RATIO = tip_ratio;
     if (search_depth != -1.0) config.SEARCH_DEPTH_FACTOR = search_depth;
-    config.MIN_DEPTH = min_depth;
 
-    // Affichage de la config si debug
+    // IMPORTANT : Si on change les ratios, il faut recalculer les longueurs dérivées (LEN = K * RATIO)
+    if (tip_ratio != -1.0) {
+        config.TOPO_MAX_RATIO = tip_ratio;
+        config.TOPO_MAX_LEN = (size_t)(k_size * tip_ratio);
+    }
+    if (tip_rctc_ratio != -1.0) {
+        config.RCTC_MAX_RATIO = tip_rctc_ratio;
+        config.RCTC_MAX_LEN = (size_t)(k_size * tip_rctc_ratio);
+    }
+
     if (DEBUG_MODE) {
-        std::cout << "\n[CONFIG] Passes Max: " << config.MAX_PASSES << "\n"
-                  << "[CONFIG] Overlap Error: " << config.ERROR_PERCENT_OVERLAP << "\n"
-                  << "[CONFIG] Contained Error: " << config.ERROR_PERCENT_CONTAINED << "\n"
-                  << "[CONFIG] Coverage Ratio: " << config.COVERAGE_RATIO << std::endl;
+        std::cout << "\n[CONFIG APPLIQUEE]" << "\n"
+                  << "  Passes Simp: " << config.MAX_PASSES << "\n"
+                  << "  Overlap Err: " << config.ERROR_PERCENT_OVERLAP << "\n"
+                  << "  Contained Err: " << config.ERROR_PERCENT_CONTAINED << "\n"
+                  << "  Cov Ratio: " << config.COVERAGE_RATIO << "\n"
+                  << "  Tip Ratio (Topo): " << config.TOPO_MAX_RATIO << " -> Len: " << config.TOPO_MAX_LEN << "\n"
+                  << "  Tip Ratio (RCTC): " << config.RCTC_MAX_RATIO << " -> Len: " << config.RCTC_MAX_LEN << "\n"
+                  << "  Max Contig Len: " << config.MAX_CONTIG_LEN << std::endl;
     }
 
     Convert converter;
@@ -221,14 +280,6 @@ int main(int argc, char* argv[]) {
     GraphDBJ graph(converter, k_size, config);
     std::cout << "Graphe initial construit: " << graph.getNodes().size() << " noeuds." << std::endl;
 
-    // Filtrage Low Depth
-    if (min_depth > 1) {
-        Timer<std::chrono::milliseconds> t("Filtrage Low Depth");
-        int removed = graph.removeLowDepthKmers(min_depth);
-        std::cout << "Filtrage (profondeur < " << min_depth << ") : "
-                  << removed << " k-mers supprimes." << std::endl;
-    }
-
     // 4. Simplification
     {
         Timer<std::chrono::milliseconds> t("Simplification");
@@ -248,6 +299,14 @@ int main(int argc, char* argv[]) {
             }
         }
         std::cout << "Termine en " << iter << " passes." << std::endl;
+    }
+
+    // Filtrage Low Depth
+    if (min_depth > 1) {
+        Timer<std::chrono::milliseconds> t("Filtrage Low Depth");
+        int removed = graph.removeLowDepthKmers(min_depth);
+        std::cout << "Filtrage (profondeur < " << min_depth << ") : "
+                  << removed << " k-mers supprimes." << std::endl;
     }
 
     // 5. Generation Contigs
@@ -313,7 +372,10 @@ int main(int argc, char* argv[]) {
         }
         out_contigs.close();
         std::cout << "Export FASTA termine : " << exported_count << " contigs ecrits dans " << fasta_name << std::endl;
-        std::cout << "Contigs ignores (< " << length_threshold << " pb) : " << skipped_count << std::endl;
+        if (enable_fusion)
+        {
+            std::cout << "Contigs ignores (< " << length_threshold << " pb) : " << skipped_count << std::endl;
+        }
     }
 
     return 0;
