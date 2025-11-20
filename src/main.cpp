@@ -37,8 +37,21 @@ struct Timer
     }
 };
 
+void print_banner() {
+    std::cout << R"(
+██████╗  █████╗ ███╗   ███╗██╗██╗      █████╗ ███████╗███████╗
+██╔══██╗██╔══██╗████╗ ████║██║██║     ██╔══██╗██╔════╝██╔════╝
+██████╔╝███████║██╔████╔██║██║██║     ███████║███████╗███████╗
+██╔══██╗██╔══██║██║╚██╔╝██║██║██║     ██╔══██║╚════██║╚════██║
+██║  ██║██║  ██║██║ ╚═╝ ██║██║███████╗██║  ██║███████║███████║
+╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝
+
+    )" << std::endl;
+}
+
 // --- Affichage de l'aide ---
 void print_usage(const char* prog_name, const GraphDBJConfig& def_conf) {
+    print_banner();
     std::cout << "Usage: " << prog_name << " <input.fasta> <output_prefix> [OPTIONS]\n\n"
               << "Arguments obligatoires:\n"
               << "  <input.fasta>        Fichier contenant les lectures (FASTA)\n"

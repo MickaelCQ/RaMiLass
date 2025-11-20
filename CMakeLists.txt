@@ -30,15 +30,15 @@ target_include_directories(assembler_lib PUBLIC src)
 # ----------------------------------------------------
 
 # 3. Create your main application executable
-add_executable(assembler_app
+add_executable(ramilass
         src/main.cpp
 )
 
 # Move definitions to after target creation
-target_compile_definitions(assembler_app PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
+target_compile_definitions(ramilass PRIVATE -D_GLIBCXX_USE_CXX11_ABI=1)
 
 # 4. Link your main app against your library
-target_link_libraries(assembler_app PRIVATE assembler_lib)
+target_link_libraries(ramilass PRIVATE assembler_lib)
 
 
 # ----------------------------------------------------

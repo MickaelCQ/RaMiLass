@@ -23,9 +23,13 @@ description = "Run the test suite"
 [tasks.start]
 args = [
     { "arg" = "file", "default" = "./Tests_Et_Ref/reads.fasta" },
-    { "arg" = "output_tsv", "default" = "reads" },
+    { "arg" = "output_tsv", "default" = "ramilass" },
 ]
-cmd = "./build/assembler_app {{ file }} {{ output_tsv }}"
+cmd = "./build/ramilass {{ file }} {{ output_tsv }} --fuse --gfa"
+description = "Run the app"
+
+[tasks.ramilass]
+cmd = "./build/ramilass"
 description = "Run the app"
 
 [tasks.tofasta]
@@ -37,5 +41,5 @@ cmd = "sed ':a;N;$!ba;s/+\\n/+/g' {{ input }} | grep -v \"^+\" | sed \"s/@/>/g\"
 [dependencies]
 cmake = ">=4.1.2,<5"
 gtest = ">=1.17.0,<2"
-ragtag = { version = ">=2.1.0,<3", channel = "bioconda" }
 minia = { version = ">=3.2.6,<4", channel = "bioconda" }
+quast = { version = ">=5.3.0,<6", channel = "bioconda" }
