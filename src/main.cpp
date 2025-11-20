@@ -60,10 +60,11 @@ void print_usage(const char* prog_name, const GraphDBJConfig& def_conf) {
               << "  -k <int>             Taille des k-mers (defaut: 31)\n"
               << "  --fuse               Activer l'etape de fusion des contigs (defaut: inactif)\n"
               << "  --gfa                Exporter le graphe au format GFA (defaut: non)\n"
+              << "  --min-len <int>      Taille minimale des contigs exportes (defaut: 62)\n"
               << "  --debug              Afficher les temps d'execution et infos detailles\n"
               << "  --help, -h           Afficher ce message\n\n"
               << "Options de l'Assembleur (GraphDBJ):\n"
-              << "  --simplification-passes <int>       Nb max de passes de simplification (defaut: " << def_conf.MAX_PASSES << ")\n\n"
+              << "  --simplification-passes <int>       Nb max de passes de simplification (defaut: " << def_conf.MAX_PASSES << ")\n"
               << "  --popping-passes <int>        Nb max de passes de suppression de tips et bulle (defaut: 10" << ")\n\n"
               << "  --overlap-err <dbl>  % d'erreur autorise pour chevauchement (defaut: " << def_conf.ERROR_PERCENT_OVERLAP << ")\n"
               << "  --contained-err <dbl>% d'erreur autorise pour inclusion (defaut: " << def_conf.ERROR_PERCENT_CONTAINED << ")\n\n"
@@ -76,7 +77,6 @@ void print_usage(const char* prog_name, const GraphDBJConfig& def_conf) {
 int main(int argc, char* argv[]) {
     // 1. Gestion des arguments
     if (argc < 3) {
-        // On cree une config bidon juste pour afficher les valeurs par defaut dans l'aide
         print_usage(argv[0], GraphDBJConfig(31));
         return 1;
     }
@@ -87,10 +87,10 @@ int main(int argc, char* argv[]) {
     // Paramètres par défaut
     int k_size = 31;
     bool export_gfa = false;
-    bool enable_fusion = false; // Par défaut, la fusion est désactivée
+    bool enable_fusion = false;
+    int min_output_len = 62;
 
-    // On stocke les paramètres optionnels pour les appliquer plus tard
-    // Valeurs par défaut initiales (seront écrasées par GraphDBJConfig mais utiles pour le parsing)
+    // Paramètres optionnels de config
     int max_passes = -1;
     int max_passes_pop = 10;
     double overlap_err = -1.0;
@@ -115,6 +115,10 @@ int main(int argc, char* argv[]) {
         }
         else if (arg == "--debug") {
             DEBUG_MODE = true;
+        }
+        else if (arg == "--min-len") {
+            if (i + 1 < argc) min_output_len = std::stoi(argv[++i]);
+            else { std::cerr << "Erreur: --min-len necessite une valeur." << std::endl; return 1; }
         }
         else if (arg == "--simplification-passes") {
             if (i + 1 < argc) max_passes = std::stoi(argv[++i]);
@@ -157,6 +161,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Entree  : " << filename << std::endl;
     std::cout << "Sortie  : " << output_prefix << ".*" << std::endl;
     std::cout << "K-mer   : " << k_size << std::endl;
+    std::cout << "Min Len : " << (min_output_len != -1 ? std::to_string(min_output_len) : "k (" + std::to_string(k_size) + ")") << std::endl;
+
     std::cout << "Fusion  : " << (enable_fusion ? "ACTIVEE" : "DESACTIVEE") << std::endl;
     if (DEBUG_MODE) std::cout << "Mode    : DEBUG (Timers actifs)" << std::endl;
 
@@ -236,11 +242,10 @@ int main(int argc, char* argv[]) {
         std::cout << "Contigs bruts generes : " << contigs.size() << std::endl;
     }
 
-    // 6. Fusion (Overlap/Contained) - Conditionnée par --fuse
+    // 6. Fusion (Overlap/Contained)
     if (enable_fusion) {
         Timer<std::chrono::milliseconds> t("Fusion des Contigs");
         int min_overlap = k_size / 2;
-        // On peut rendre min_overlap configurable si besoin, ici hardcodé à k/2
 
         GraphDBJ::mergeContigs(
             contigs,
@@ -264,7 +269,7 @@ int main(int argc, char* argv[]) {
             graph.exportToGFA(gfa_name);
         }
 
-        // Export FASTA (Toujours fait)
+        // Export FASTA
         std::string fasta_name = output_prefix + ".contigs.fasta";
         std::ofstream out_contigs(fasta_name);
         if (!out_contigs.is_open()) {
@@ -272,18 +277,27 @@ int main(int argc, char* argv[]) {
              return 1;
         }
 
+        // Determination du seuil de taille
+        size_t length_threshold = (min_output_len != -1) ? (size_t)min_output_len : (size_t)k_size;
+
         int exported_count = 0;
+        int skipped_count = 0;
+
         for (size_t i = 0; i < contigs.size(); ++i) {
             size_t len_bp = contigs[i].size() / 2;
-            // Filtre minimal : on ne garde que ce qui est >= 2*k (optionnel, garde-fou)
-            if (len_bp >= (size_t)k_size) {
+
+            // Utilisation du seuil variable
+            if (len_bp >= length_threshold) {
                 out_contigs << ">contig_" << i << "_len_" << len_bp << "\n";
                 out_contigs << contigs[i].readBitVector() << "\n";
                 exported_count++;
+            } else {
+                skipped_count++;
             }
         }
         out_contigs.close();
         std::cout << "Export FASTA termine : " << exported_count << " contigs ecrits dans " << fasta_name << std::endl;
+        std::cout << "Contigs ignores (< " << length_threshold << " pb) : " << skipped_count << std::endl;
     }
 
     return 0;
