@@ -133,3 +133,9 @@ uint8_t BitVector::getNucleotideAt(size_t index) const {
     if (b2) val |= 1; // 01
     return val;
 }
+
+void BitVector::resize(size_t num_bits) {
+    if (num_bits >= _bitCount) return; // We only support shrinking here for safety
+    _bitCount = num_bits;
+    // We don't necessarily need to shrink the vector memory, just the count
+}

@@ -42,6 +42,7 @@ public :
     bool test(size_t idx) const;
     bool operator[](size_t idx) const { return test(idx); }
 
+    /// TRUCS QUE J'AI RAJOUTÉ
     /**
      * @brief Ajoute le contenu d'un autre BitVector à la fin de celui-ci.
      * @param other Le vecteur à ajouter.
@@ -53,4 +54,6 @@ public :
      * @brief Récupère la valeur (0-3) du nucléotide à l'index donné.
      */
     uint8_t getNucleotideAt(size_t index) const;
+
+    void resize(size_t num_bits);
 };
