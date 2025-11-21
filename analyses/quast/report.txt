@@ -1,0 +1,57 @@
+All statistics are based on contigs of size >= 500 bp, unless otherwise noted (e.g., "# contigs (>= 0 bp)" and "Total length (>= 0 bp)" include all contigs).
+
+Assembly                     minia.contigs  ramilass_fuse.contigs
+# contigs (>= 0 bp)          4              3                    
+# contigs (>= 1000 bp)       1              1                    
+# contigs (>= 5000 bp)       1              1                    
+# contigs (>= 10000 bp)      0              1                    
+# contigs (>= 25000 bp)      0              0                    
+# contigs (>= 50000 bp)      0              0                    
+Total length (>= 0 bp)       10187          10301                
+Total length (>= 1000 bp)    9936           10094                
+Total length (>= 5000 bp)    9936           10094                
+Total length (>= 10000 bp)   0              10094                
+Total length (>= 25000 bp)   0              0                    
+Total length (>= 50000 bp)   0              0                    
+# contigs                    1              1                    
+Largest contig               9936           10094                
+Total length                 9936           10094                
+Reference length             10624          10624                
+GC (%)                       44.05          44.03                
+Reference GC (%)             44.14          44.14                
+N50                          9936           10094                
+NG50                         9936           10094                
+N90                          9936           10094                
+NG90                         9936           10094                
+auN                          9936.0         10094.0              
+auNG                         9292.6         9590.4               
+L50                          1              1                    
+LG50                         1              1                    
+L90                          1              1                    
+LG90                         1              1                    
+# misassemblies              0              0                    
+# misassembled contigs       0              0                    
+Misassembled contigs length  0              0                    
+# local misassemblies        0              0                    
+# scaffold gap ext. mis.     0              0                    
+# scaffold gap loc. mis.     0              0                    
+# unaligned mis. contigs     0              0                    
+# unaligned contigs          0 + 0 part     0 + 0 part           
+Unaligned length             0              0                    
+Genome fraction (%)          93.524         95.021               
+Duplication ratio            1.000          1.000                
+# N's per 100 kbp            0.00           0.00                 
+# mismatches per 100 kbp     0.00           89.16                
+# indels per 100 kbp         0.00           9.91                 
+Largest alignment            9936           10094                
+Total aligned length         9936           10094                
+NA50                         9936           10094                
+NGA50                        9936           10094                
+NA90                         9936           10094                
+NGA90                        9936           10094                
+auNA                         9936.0         10094.0              
+auNGA                        9292.6         9590.4               
+LA50                         1              1                    
+LGA50                        1              1                    
+LA90                         1              1                    
+LGA90                        1              1                    

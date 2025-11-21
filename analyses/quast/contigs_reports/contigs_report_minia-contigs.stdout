@@ -1,0 +1,47 @@
+Aligning contigs to reference...
+	Aligning contigs to the reference
+Filtering alignments...
+Parsing coords...
+Loading reference...
+	Loaded [AB080275.1]
+	Total Regions: 1
+	Total Region Length: 10624
+Analyzing contigs...
+CONTIG: 0__len__9936 (9936bp)
+Best alignment score: 9936.0 (LEN: 9936, IDY: 100.00), Total number of alignments: 1
+		One align captures most of this contig: 71 10006 | 9936 1 | 9936 9936 | 100.0 | AB080275.1 0__len__9936
+
+Analyzing coverage...
+Writing SNPs into /home/raphael/Assembleur/quast_results/results_2025_11_21_11_39_59/contigs_reports/minimap_output/minia-contigs.used_snps
+
+Analysis is finished!
+Founded SNPs were written into /home/raphael/Assembleur/quast_results/results_2025_11_21_11_39_59/contigs_reports/minimap_output/minia-contigs.used_snps
+
+Results:
+	Local Misassemblies: 0
+	Misassemblies: 0
+		Relocations: 0
+		Translocations: 0
+		Inversions: 0
+	Scaffold gap extensive misassemblies: 0
+	Scaffold gap local misassemblies: 0
+	Misassembled Contigs: 0
+	Misassembled Contig Bases: 0
+	Misassemblies Inter-Contig Overlap ("Extra" Aligned Bases): 0
+Unaligned Contigs: 0 + 0 part
+Half Unaligned Contigs with Misassemblies: 0
+Unaligned Bases in Fully and Partially Unaligned Contigs: 0
+
+Ambiguously Mapped Contigs: 0
+Total Bases in Ambiguously Mapped Contigs: 0
+"Extra" Aligned Bases in Ambiguously Mapped Contigs: 0
+Note that --allow-ambiguity option was set to "one" and only first alignment per each of these contigs was used (there is no "extra" aligned bases).
+
+	Covered Bases in Reference: 9936
+	Raw Aligned Bases in Assembly: 9936
+	Total Aligned Bases in Assembly (with "Extras"): 9936
+
+	SNPs: 0
+	Insertions: 0
+	Deletions: 0
+
