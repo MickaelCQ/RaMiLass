@@ -609,7 +609,7 @@ int GraphDBJ::clipTips() {
                 // Critère 1 : Très court (Topologique)
                 if (len <= TOPO_MAX_LEN) should_remove = true;
                 // Critère 2 : Court et couverture faible par rapport à l'ancrage
-                else if (len <= RCTC_MAX_LEN && anchor_cov >= tip_avg_cov) should_remove = true;
+                else if (len <= RCTC_MAX_LEN && anchor_cov > tip_avg_cov) should_remove = true;
 
                 if (should_remove) {
                     disconnectNodes(anchor, last_tip_node); // Coupe le lien avec le graphe
