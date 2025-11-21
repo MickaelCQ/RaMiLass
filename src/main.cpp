@@ -57,21 +57,23 @@ void print_usage(const char* prog_name, const GraphDBJConfig& def_conf) {
               << "  <input.fasta>        Fichier contenant les lectures (FASTA)\n"
               << "  [output_dir]         Dossier de sortie (Optionnel, defaut: .)\n\n"
               << "Options Generales:\n"
-              << "  -o, --out-name <str> Nom de base pour les fichiers de sortie (au lieu du nom d'entree)\n"
+              << "  -o, --out-name <str> Nom de base pour les fichiers de sortie\n"
               << "  -k <int>             Taille des k-mers (defaut: 31)\n"
               << "  --fuse               Activer l'etape de fusion des contigs (defaut: inactif)\n"
-              << "  --gfa                Exporter le graphe au format GFA (defaut: non)\n"
+              << "  --gfa                Exporter le graphe au format GFA\n"
               << "  --min-len <int>      Taille minimale des contigs exportes (defaut: 62)\n"
-              << "  --debug              Afficher les temps d'execution et infos detailles\n"
-              << "  --help, -h           Afficher ce message\n\n"
+              << "  --debug              Afficher les temps d'execution et infos detailles\n\n"
+              << "Options de Fusion (--fuse):\n"
+              << "  --overlap-err <dbl>    % d'erreur autorise pour chevauchement (defaut: " << def_conf.ERROR_PERCENT_OVERLAP << ")\n"
+              << "  --contained-err <dbl>  % d'erreur autorise pour inclusion (defaut: " << def_conf.ERROR_PERCENT_CONTAINED << ")\n"
+              << "  --max-scan-depth <int> Profondeur scan extension (defaut: " << def_conf.MAX_SCAN_DEPTH << ")\n"
+              << "  --max-seed-depth <int> Profondeur recherche seed (defaut: " << def_conf.MAX_SEED_DEPTH << ")\n\n"
               << "Options de l'Assembleur (GraphDBJ):\n"
               << "  --simplification-passes <int> Nb max de passes de simplification (defaut: " << def_conf.MAX_PASSES << ")\n"
-              << "  --popping-passes <int>        Nb max de passes de suppression de tips/bulles (defaut: 1)\n\n"
-              << "  --overlap-err <dbl>    % d'erreur autorise pour chevauchement (defaut: " << def_conf.ERROR_PERCENT_OVERLAP << ")\n"
-              << "  --contained-err <dbl>  % d'erreur autorise pour inclusion (defaut: " << def_conf.ERROR_PERCENT_CONTAINED << ")\n\n"
+              << "  --popping-passes <int>        Nb max de passes de suppression de tips/bulles (defaut: 1)\n"
               << "  --cov-ratio <dbl>      Ratio de couverture pour bifurcations (defaut: " << def_conf.COVERAGE_RATIO << ")\n"
               << "  --tip-topo-ratio <dbl> Ratio couverture pour Tip Topologique (defaut: " << def_conf.TOPO_MAX_RATIO << ")\n"
-              << "  --tip-rctc-ratio <dbl> Ratio couverture pour Tip RCTC (defaut: " << def_conf.RCTC_MAX_RATIO << ")\n\n"
+              << "  --tip-rctc-ratio <dbl> Ratio couverture pour Tip RCTC (defaut: " << def_conf.RCTC_MAX_RATIO << ")\n"
               << "  --search-depth <dbl>   Facteur de profondeur de recherche (defaut: " << def_conf.SEARCH_DEPTH_FACTOR << ")\n"
               << "  --min-cov <int>        Couverture min. pour garder un k-mer (defaut: 1)\n"
               << "  --max-contig-len <int> Longueur max d'un contig genere (defaut: " << def_conf.MAX_CONTIG_LEN << ")\n"
@@ -95,15 +97,10 @@ int main(int argc, char* argv[]) {
     }
 
     if (!fs::exists(output_dir)) {
-        try {
-            fs::create_directories(output_dir);
-        } catch (const fs::filesystem_error& e) {
-            std::cerr << "Erreur: Impossible de creer le dossier " << output_dir << "\n" << e.what() << std::endl;
-            return 1;
-        }
+        try { fs::create_directories(output_dir); }
+        catch (const fs::filesystem_error& e) { return 1; }
     }
 
-    // Paramètres par défaut
     int k_size = 31;
     std::string custom_output_name = "";
     bool export_gfa = false;
@@ -111,18 +108,21 @@ int main(int argc, char* argv[]) {
     int min_output_len = 62;
     int min_depth = 1;
 
-    // Paramètres optionnels de config (-1 ou -1.0 indique "pas défini par l'user")
+    // Config optionnels
     int max_passes = -1;
     int max_passes_pop = 1;
-    int max_contig_len = -1; 
+    int max_contig_len = -1;
     double overlap_err = -1.0;
     double contained_err = -1.0;
     double cov_ratio = -1.0;
     double tip_ratio = -1.0;
-    double tip_rctc_ratio = -1.0; 
+    double tip_rctc_ratio = -1.0;
     double search_depth = -1.0;
 
-    // Parsing manuel
+    // Nouveaux params
+    int max_scan_depth = -1;
+    int max_seed_depth = -1;
+
     for (int i = arg_start_index; i < argc; ++i) {
         std::string arg = argv[i];
 
@@ -137,17 +137,18 @@ int main(int argc, char* argv[]) {
         else if (arg == "--fuse") {
             enable_fusion = true;
         }
-        else if (arg == "--gfa") {
-            export_gfa = true;
-        }
-        else if (arg == "--debug") {
-            DEBUG_MODE = true;
-        }
+        else if (arg == "--fuse") enable_fusion = true;
+        else if (arg == "--gfa") export_gfa = true;
+        else if (arg == "--debug") DEBUG_MODE = true;
         else if (arg == "--min-len") {
             if (i + 1 < argc) min_output_len = std::stoi(argv[++i]);
-            else { std::cerr << "Erreur: --min-len necessite une valeur." << std::endl; return 1; }
         }
-        // --- Paramètres GraphDBJConfig ---
+        else if (arg == "--max-scan-depth") {
+            if (i + 1 < argc) max_scan_depth = std::stoi(argv[++i]);
+        }
+        else if (arg == "--max-seed-depth") {
+            if (i + 1 < argc) max_seed_depth = std::stoi(argv[++i]);
+        }
         else if (arg == "--simplification-passes") {
             if (i + 1 < argc) max_passes = std::stoi(argv[++i]);
         }
@@ -230,6 +231,8 @@ int main(int argc, char* argv[]) {
     if (contained_err != -1.0) config.ERROR_PERCENT_CONTAINED = contained_err;
     if (cov_ratio != -1.0) config.COVERAGE_RATIO = cov_ratio;
     if (search_depth != -1.0) config.SEARCH_DEPTH_FACTOR = search_depth;
+    if (max_scan_depth != -1) config.MAX_SCAN_DEPTH = (size_t)max_scan_depth;
+    if (max_seed_depth != -1) config.MAX_SEED_DEPTH = (size_t)max_seed_depth;
 
     // IMPORTANT : Si on change les ratios, il faut recalculer les longueurs dérivées (LEN = K * RATIO)
     if (tip_ratio != -1.0) {
@@ -246,6 +249,8 @@ int main(int argc, char* argv[]) {
                   << "  Passes Simp: " << config.MAX_PASSES << "\n"
                   << "  Overlap Err: " << config.ERROR_PERCENT_OVERLAP << "\n"
                   << "  Contained Err: " << config.ERROR_PERCENT_CONTAINED << "\n"
+                  << "  Max Scan Depth: " << config.MAX_SCAN_DEPTH << "\n"
+                  << "  Max Seed Depth: " << config.MAX_SEED_DEPTH << "\n"
                   << "  Cov Ratio: " << config.COVERAGE_RATIO << "\n"
                   << "  Tip Ratio (Topo): " << config.TOPO_MAX_RATIO << " -> Len: " << config.TOPO_MAX_LEN << "\n"
                   << "  Tip Ratio (RCTC): " << config.RCTC_MAX_RATIO << " -> Len: " << config.RCTC_MAX_LEN << "\n"
@@ -324,9 +329,9 @@ int main(int argc, char* argv[]) {
 
         GraphDBJ::mergeContigs(
             contigs,
+            k_size,
             min_overlap,
-            config.ERROR_PERCENT_OVERLAP,
-            config.ERROR_PERCENT_CONTAINED
+            config // Passage de toute la config
         );
         std::cout << "Contigs finaux apres fusion : " << contigs.size() << std::endl;
     } else {

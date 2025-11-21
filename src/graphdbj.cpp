@@ -162,16 +162,15 @@ static bool checkContainmentAt(const BitVector& master, const BitVector& candida
  * 2. Phase d'Extension : Tente d'étendre les bouts des contigs restants en trouvant des chevauchements.
  * Gère les orientations (Forward/Reverse) pour permettre la fusion même si un contig a été assemblé à l'envers.
  */
-void GraphDBJ::mergeContigs(std::vector<BitVector>& contigs, int min_overlap, double overlap_error_percent, double contained_error_percent) {
+void GraphDBJ::mergeContigs(std::vector<BitVector>& contigs, int k, int min_overlap, const GraphDBJConfig& config) {
     std::cout << "--- Post-traitement : Fusion 'Deep Seeding' (Bidirectionnelle) ---" << std::endl;
 
-    // Taille du k-mer utilisé pour l'indexation (seed)
-    int index_k = (min_overlap > 31) ? 31 : min_overlap;
-
-    // Paramètres pour limiter la recherche (optimisation performance)
-    const size_t MAX_SCAN_DEPTH = 5000; // Ne cherche pas de seed au-delà de 5000pb du bout
-    const size_t MAX_SEED_DEPTH = 1500;
-    const size_t SEED_STRIDE = index_k; // Pas d'échantillonnage des seeds
+    // Récupération des paramètres depuis la config
+    const double overlap_error_percent = config.ERROR_PERCENT_OVERLAP;
+    const double contained_error_percent = config.ERROR_PERCENT_CONTAINED;
+    const size_t MAX_SCAN_DEPTH = config.MAX_SCAN_DEPTH;
+    const size_t MAX_SEED_DEPTH = config.MAX_SEED_DEPTH;
+    const size_t SEED_STRIDE = (min_overlap > k) ? k : min_overlap;;
 
     std::vector<bool> absorbed(contigs.size(), false);
 
@@ -186,12 +185,12 @@ void GraphDBJ::mergeContigs(std::vector<BitVector>& contigs, int min_overlap, do
         // Indexation du DÉBUT de chaque contig
         for (size_t i = 0; i < contigs.size(); ++i) {
             size_t len = contigs[i].size() / 2;
-            if (len < (size_t)index_k) continue;
+            if (len < (size_t)SEED_STRIDE) continue;
 
             // Stocke le k-mer de début (Normal et Reverse Complement)
-            start_map[getKmerKey(contigs[i], 0, index_k)].push_back({i, false});
+            start_map[getKmerKey(contigs[i], 0, SEED_STRIDE)].push_back({i, false});
             BitVector rc = getBitVectorReverseComplement(contigs[i]);
-            start_map[getKmerKey(rc, 0, index_k)].push_back({i, true});
+            start_map[getKmerKey(rc, 0, SEED_STRIDE)].push_back({i, true});
         }
 
         // Scan de tous les contigs pour voir s'ils contiennent le début d'un autre
@@ -199,8 +198,8 @@ void GraphDBJ::mergeContigs(std::vector<BitVector>& contigs, int min_overlap, do
             if (absorbed[i]) continue;
             size_t m_len = contigs[i].size() / 2;
 
-            for (size_t pos = 0; pos <= m_len - index_k; ++pos) {
-                uint64_t key = getKmerKey(contigs[i], pos, index_k);
+            for (size_t pos = 0; pos <= m_len - SEED_STRIDE; ++pos) {
+                uint64_t key = getKmerKey(contigs[i], pos, SEED_STRIDE);
                 if (start_map.find(key) == start_map.end()) continue;
 
                 // Potentiels candidats à l'inclusion
@@ -237,28 +236,28 @@ void GraphDBJ::mergeContigs(std::vector<BitVector>& contigs, int min_overlap, do
         for (size_t i = 0; i < contigs.size(); ++i) {
             if (absorbed[i]) continue;
             size_t len = contigs[i].size() / 2;
-            if (len < (size_t)index_k) continue;
+            if (len < (size_t)SEED_STRIDE) continue;
 
             // On indexe plusieurs positions au début du contig pour permettre un chevauchement partiel
             for (size_t offset = 0; offset < len && offset < MAX_SEED_DEPTH; offset += SEED_STRIDE) {
-                if (offset + index_k > len) break;
-                seed_map[getKmerKey(contigs[i], offset, index_k)].push_back({i, false, offset});
+                if (offset + SEED_STRIDE > len) break;
+                seed_map[getKmerKey(contigs[i], offset, SEED_STRIDE)].push_back({i, false, offset});
                 BitVector rc = getBitVectorReverseComplement(contigs[i]);
-                seed_map[getKmerKey(rc, offset, index_k)].push_back({i, true, offset});
+                seed_map[getKmerKey(rc, offset, SEED_STRIDE)].push_back({i, true, offset});
             }
         }
 
         // 2. Définition de la logique d'extension (Lambda)
         auto try_extend = [&](BitVector& master) -> bool {
             size_t m_len = master.size() / 2;
-            if (m_len < (size_t)index_k) return false;
+            if (m_len < (size_t)SEED_STRIDE) return false;
 
             // On scanne la FIN du master pour voir si elle correspond à un début indexé
-            size_t scan_limit = (m_len > MAX_SCAN_DEPTH) ? MAX_SCAN_DEPTH : (m_len - index_k);
+            size_t scan_limit = (m_len > MAX_SCAN_DEPTH) ? MAX_SCAN_DEPTH : (m_len - SEED_STRIDE);
 
             for (size_t offset = 0; offset < scan_limit; ++offset) {
-                size_t probe_pos = m_len - index_k - offset; // On recule depuis la fin
-                uint64_t key = getKmerKey(master, probe_pos, index_k);
+                size_t probe_pos = m_len - SEED_STRIDE - offset; // On recule depuis la fin
+                uint64_t key = getKmerKey(master, probe_pos, SEED_STRIDE);
 
                 if (seed_map.find(key) == seed_map.end()) continue;
 
@@ -326,7 +325,7 @@ void GraphDBJ::mergeContigs(std::vector<BitVector>& contigs, int min_overlap, do
         }
     }
 
-    // Construction du vecteur final    
+    // Construction du vecteur final
     for (size_t k = 0; k < contigs.size(); /* rien */) {
       if (absorbed[k]) {
           contigs.erase(contigs.begin() + k);
