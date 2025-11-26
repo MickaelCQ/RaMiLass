@@ -1,6 +1,7 @@
 # RaMiLASS
 
 Ce projet est un assembleur de génome en C++ qui utilise des graphes de De Bruijn.
+Le rapport est disponible dans [./report/AssembleurAnnie.pdf](./report/AssembleurAnnie.pdf).
 
 ## Auteurs
 
