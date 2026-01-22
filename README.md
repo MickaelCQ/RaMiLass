@@ -1,4 +1,5 @@
 # RaMiLASS
+[![Pixi Badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/prefix-dev/pixi/main/assets/badge/v0.json)](https://pixi.sh)
 
 Ce projet est un assembleur de génome en C++ qui utilise des graphes de De Bruijn.
 Le rapport est disponible dans [./report/AssembleurAnnie.pdf](./report/AssembleurAnnie.pdf).
