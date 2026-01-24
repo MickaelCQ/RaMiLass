@@ -5,31 +5,35 @@ platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks._preparedir]
-cmd = "mkdir -p build && rm -rf build"
+cmd = "rm -rf build"
 
 [tasks._configure]
 cmd = "cmake -S . -B build"
 description = "Configure the C++ project using CMake"
+inputs = ["CMakeLists.txt"]
+outputs = ["build/Makefile"]
 
 [tasks._configure_static]
 cmd = "cmake -S . -B build -DCMAKE_EXE_LINKER_FLAGS='-static'"
 description = "Configure the C++ project using CMake"
+inputs = ["src/*", "CMakeLists.txt"]
+outputs = ["build"]
 
 [tasks.build]
 cmd = "cmake --build build"
 description = "Build the C++ project using CMake"
-depends-on = ["_preparedir", "_configure"]
-
-[tasks._build_apptainer]
-cmd = "cmake --build build"
-description = "Build the C++ project using CMake"
-depends-on = ["_preparedir", "_configure_static"]
+depends-on = ["_configure"]
+inputs = ["src/*", "CMakeLists.txt"]
+outputs = ["build/ramilass"]
 
 [tasks.test]
 cmd = "./build/run_tests"
 description = "Run the test suite"
+inputs = ["build/ramilass"]
 
 [tasks.start]
+inputs = ["build/ramilass"]
+outputs = ["{{ output }}.gfa", "{{ output }}.fasta"]
 args = [
     { "arg" = "file", "default" = "data/reads.fasta" },
     { "arg" = "output", "default" = "ramilass" },
@@ -40,15 +44,18 @@ description = "Run the app"
 [tasks.ramilass]
 cmd = "./build/ramilass"
 description = "Run the app"
+depends-on = ["build"]
 
 [tasks.tofasta]
 args = [
     { "arg" = "input", "default" = "./data/reads.fastq.fq" },
     { "arg" = "output", "default" = "./data/reads.fasta" }]
 cmd = "sed ':a;N;$!ba;s/+\\n/+/g' {{ input }} | grep -v \"^+\" | sed \"s/@/>/g\" > {{ output }}"
+inputs = ["{{ input }}"]
+outputs = ["{{ output }}"]
 
 [tasks._build_debug]
-cmd = "rm -r build && cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build"
+cmd = "rm -fr build && cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build"
 depends-on = ["_preparedir"]
 
 [feature.memcheck.tasks.check_memory]
@@ -83,6 +90,8 @@ matplotlib = "*"
 [feature.plot.tasks.plotit]
 cmd = "cd benchmark && python -s plot.py"
 description = "Generate plots from benchmark results"
+inputs = ["benchmark/plot.py", "benchmark/*.csv"]
+outputs = ["benchmark/*.png"]
 
 [feature.container.dependencies]
 apptainer = "*"
