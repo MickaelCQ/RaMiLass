@@ -44,7 +44,7 @@ description = "Run the app"
 [tasks.ramilass]
 cmd = "$INIT_CWD/build/ramilass"
 description = "Run the app"
-depends-on = ["$INIT_CWD/build"]
+inputs = ["$INIT_CWD/build"]
 
 [tasks.tofasta]
 args = [

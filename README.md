@@ -138,6 +138,7 @@ pixi containerize -o ramilass.sif -s
 
 Vous pouvez maintenant utiliser l'image `ramilass.sif` pour faire tourner l'assembleur.
 
-```bash
+```shell
 apptainer run --bind $(pwd)/../.:$(pwd)/../. ramilass.sif build
 apptainer run --bind $(pwd)/../.:$(pwd)/../. ramilass.sif start
+```
