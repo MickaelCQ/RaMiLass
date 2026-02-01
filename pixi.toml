@@ -8,58 +8,58 @@ version = "0.1.0"
 cmd = "rm -rf build"
 
 [tasks._configure]
-cmd = "cmake -S . -B build"
+cmd = "cmake -S $INIT_CWD -B $INIT_CWD/build"
 description = "Configure the C++ project using CMake"
-inputs = ["CMakeLists.txt"]
-outputs = ["build/Makefile"]
+inputs = ["$INIT_CWD/CMakeLists.txt"]
+outputs = ["$INIT_CWD/build/Makefile"]
 
 [tasks._configure_static]
-cmd = "cmake -S . -B build -DCMAKE_EXE_LINKER_FLAGS='-static'"
+cmd = "cmake -S $INIT_CWD -B $INIT_CWD/build -DCMAKE_EXE_LINKER_FLAGS='-static'"
 description = "Configure the C++ project using CMake"
-inputs = ["src/*", "CMakeLists.txt"]
-outputs = ["build"]
+inputs = ["$INIT_CWD/src/*", "$INIT_CWD/CMakeLists.txt"]
+outputs = ["$INIT_CWD/build"]
 
 [tasks.build]
-cmd = "cmake --build build"
+cmd = "cmake --build $INIT_CWD/build"
 description = "Build the C++ project using CMake"
 depends-on = ["_configure"]
-inputs = ["src/*", "CMakeLists.txt"]
-outputs = ["build/ramilass"]
+inputs = ["$INIT_CWD/src/*", "$INIT_CWD/CMakeLists.txt"]
+outputs = ["$INIT_CWD/build/ramilass"]
 
 [tasks.test]
-cmd = "./build/run_tests"
+cmd = "$INIT_CWD/build/run_tests"
 description = "Run the test suite"
-inputs = ["build/ramilass"]
+inputs = ["$INIT_CWD/build/ramilass"]
 
 [tasks.start]
-inputs = ["build/ramilass"]
-outputs = ["{{ output }}.gfa", "{{ output }}.fasta"]
+inputs = ["$INIT_CWD/build/ramilass"]
+outputs = ["$INIT_CWD/output/{{ output }}.gfa", "$INIT_CWD/output/{{ output }}.fasta"]
 args = [
     { "arg" = "file", "default" = "data/reads.fasta" },
     { "arg" = "output", "default" = "ramilass" },
 ]
-cmd = "./build/ramilass $INIT_CWD/{{ file }} output --fuse --gfa --debug --max-contig-len 11000 --popping-passes 0"
+cmd = "$INIT_CWD/build/ramilass $INIT_CWD/{{ file }} output --fuse --gfa --debug --max-contig-len 11000 --popping-passes 0"
 description = "Run the app"
 
 [tasks.ramilass]
-cmd = "./build/ramilass"
+cmd = "$INIT_CWD/build/ramilass"
 description = "Run the app"
-depends-on = ["build"]
+depends-on = ["$INIT_CWD/build"]
 
 [tasks.tofasta]
 args = [
-    { "arg" = "input", "default" = "./data/reads.fastq.fq" },
-    { "arg" = "output", "default" = "./data/reads.fasta" }]
+    { "arg" = "input", "default" = "$INIT_CWD/data/reads.fastq.fq" },
+    { "arg" = "output", "default" = "$INIT_CWD/data/reads.fasta" }]
 cmd = "sed ':a;N;$!ba;s/+\\n/+/g' {{ input }} | grep -v \"^+\" | sed \"s/@/>/g\" > {{ output }}"
 inputs = ["{{ input }}"]
 outputs = ["{{ output }}"]
 
 [tasks._build_debug]
-cmd = "rm -fr build && cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build"
+cmd = "rm -fr $INIT_CWD/build && cmake -B $INIT_CWD/build -DCMAKE_BUILD_TYPE=Debug && cmake --build $INIT_CWD/build"
 depends-on = ["_preparedir"]
 
 [feature.memcheck.tasks.check_memory]
-cmd = "valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-origins=yes build/ramilass data/reads.fasta --fuse"
+cmd = "valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-origins=yes $INIT_CWD/build/ramilass $INIT_CWD/data/reads.fasta --fuse"
 depends-on = ["_build_debug"]
 description = "Check memory leaks using Valgrind"
 
