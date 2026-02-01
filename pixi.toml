@@ -38,7 +38,7 @@ args = [
     { "arg" = "file", "default" = "data/reads.fasta" },
     { "arg" = "output", "default" = "ramilass" },
 ]
-cmd = "$INIT_CWD/build/ramilass $INIT_CWD/{{ file }} output --fuse --gfa --debug --max-contig-len 11000 --popping-passes 0"
+cmd = "$INIT_CWD/build/ramilass $INIT_CWD/{{ file }} $INIT_CWD/output --fuse --gfa --debug --max-contig-len 11000 --popping-passes 0"
 description = "Run the app"
 
 [tasks.ramilass]
@@ -93,11 +93,7 @@ description = "Generate plots from benchmark results"
 inputs = ["benchmark/plot.py", "benchmark/*.csv"]
 outputs = ["benchmark/*.png"]
 
-[feature.container.dependencies]
-apptainer = "*"
-
 [environments]
 plot = { features = ["plot"], no-default-feature = true }
 memcheck = { features = ["memcheck"], no-default-feature = true }
 bench = { features = ["bench", "quast"], no-default-feature = true }
-container = { features = ["container"], no-default-feature = true }
