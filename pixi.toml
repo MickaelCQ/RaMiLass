@@ -33,10 +33,10 @@ inputs = ["$INIT_CWD/build/ramilass"]
 
 [tasks.start]
 args = [
-    { "arg" = "file", "default" = "data/reads.fasta" },
+    { "arg" = "file", "default" = "$INIT_CWD/data/reads.fasta" },
     { "arg" = "output", "default" = "reads" },
 ]
-cmd = "./build/ramilass ./{{ file }} $INIT_CWD/output -o {{ output }} --fuse --gfa --debug --max-contig-len 11000 --popping-passes 0"
+cmd = "./build/ramilass {{ file }} $INIT_CWD/output -o {{ output }} --fuse --gfa --debug --max-contig-len 11000 --popping-passes 0"
 description = "Run the app"
 inputs = ["./build/ramilass"]
 outputs = ["./output/{{ output }}.gfa", "./output/{{ output }}.fasta"]

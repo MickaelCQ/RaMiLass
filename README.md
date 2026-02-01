@@ -133,12 +133,12 @@ Nous fournissons une image apptainer/singularity pour exécuter l'assembleur dan
 Pour construire cette image il faut en premier installer `pixitainer` qui permet de conteneuriser un environement pixi en image singularity/apptainer.
 ```shell
 pixi global install -c https://prefix.dev/raphaelribes -c https://prefix.dev/conda-forge pixitainer
-pixi containerize -o ramilass.sif -s
+pixi run build 
+pixi containerize -o ramilass.sif --add-file "$(pwd)/build/ramilass:/opt/conf/build/ramilass" --seamless --no-install
 ```
 
 Vous pouvez maintenant utiliser l'image `ramilass.sif` pour faire tourner l'assembleur.
 
 ```shell
-apptainer run --bind $(pwd)/../.:$(pwd)/../. ramilass.sif build
 apptainer run --bind $(pwd)/../.:$(pwd)/../. ramilass.sif start
 ```
